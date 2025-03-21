@@ -29,4 +29,19 @@ The API will be available at http://localhost:8000
 
 FastAPI generates automatic documentation:
 - Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc 
+- ReDoc: http://localhost:8000/redoc
+
+## Code Quality
+
+This project uses Ruff for linting and formatting.
+
+```bash
+# Install dev dependencies
+uv pip install ".[dev]"
+
+# Check code with ruff
+ruff check .
+
+# Format code with ruff
+ruff format .
+``` 
