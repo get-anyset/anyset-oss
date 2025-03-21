@@ -1,0 +1,12 @@
+{
+  "name": "remote",
+  "root": "apps/remote",
+  "targets": {
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cd apps/remote && yarn dev"
+      }
+    }
+  }
+} 

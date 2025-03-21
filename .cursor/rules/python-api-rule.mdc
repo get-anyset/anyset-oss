@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Python API scaffold
+
+- You must use FastAPI whenever a creating a new API project
+

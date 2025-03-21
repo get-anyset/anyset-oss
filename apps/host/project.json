@@ -1,0 +1,12 @@
+{
+  "name": "host",
+  "root": "apps/host",
+  "targets": {
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cd apps/host && yarn dev"
+      }
+    }
+  }
+} 
