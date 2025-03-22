@@ -25,6 +25,23 @@ python main.py
 
 The API will be available at http://localhost:8000
 
+## Configuration
+
+The application uses Pydantic settings for configuration. You can override any setting with environment variables using the `APP_` prefix:
+
+```bash
+# Example: change the port
+export APP_PORT=8080
+
+# Example: enable debug mode
+export APP_DEBUG=true
+
+# Example: set specific CORS origins
+export APP_CORS_ORIGINS='["http://localhost:3000", "http://localhost:3001"]'
+```
+
+Alternatively, you can create a `.env` file in the project root with your configuration.
+
 ## API Documentation
 
 FastAPI generates automatic documentation:
