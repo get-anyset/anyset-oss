@@ -286,6 +286,31 @@ class QueryRequest(PydanticBaseModel):
                 )
         return self
 
+    @model_validator(mode="after")
+    def validate_select(self) -> "QueryRequest":
+        """Validate that the select columns exist in the table."""
+        normalized_select = []
+        for select in self.select:
+            if isinstance(select, str):
+                s = (select, select)
+            elif isinstance(select, tuple):
+                s = select
+            elif isinstance(select, QueryRequestSelect):
+                s = (select.column_name, select.alias or select.column_name)
+
+            if s[0] not in [
+                c.name for c in self.dataset.dataset_tables[self.table_name].columns.values()
+            ]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"SelectColumnNotFound {s[0]}",
+                )
+            normalized_select.append(s)
+
+        self.select = normalized_select
+
+        return self
+
 
 class FilterOptionMinMax(BaseModel):
     """Filter options from a column classified as Fact.
