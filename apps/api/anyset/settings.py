@@ -1,7 +1,12 @@
 """Application settings configuration using Pydantic."""
 
-from pydantic import Field
+from pathlib import Path
+
+import tomli
+from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from .models import Dataset
 
 
 class Settings(BaseSettings):
@@ -27,6 +32,27 @@ class Settings(BaseSettings):
     cors_allow_headers: list[str] = ["*"]
     cors_allow_methods: list[str] = ["*"]
     cors_origins: list[str] = ["*"]
+
+    application_definitions_dir: str = "../../app-definitions"
+
+    @computed_field
+    @property
+    def application_definitions(self) -> dict[str, Dataset]:
+        """A map of application definitions.
+
+        The keys are the compound path of Dataset.path_prefix and Dataset.version, e.g. "sample/v1".
+        """
+        definitions = {}
+        app_path = Path(self.application_definitions_dir).resolve()
+
+        for toml_file in app_path.rglob("*.toml"):
+            with open(toml_file, "rb") as f:
+                data = tomli.load(f)
+                dataset = Dataset.model_validate(data)
+                key = f"{dataset.path_prefix}/v{dataset.version}"
+                definitions[key] = dataset
+
+        return definitions
 
 
 settings = Settings()
