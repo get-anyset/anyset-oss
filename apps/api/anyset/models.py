@@ -134,20 +134,6 @@ class Dataset(BaseModel):
         return column_name in column_names
 
 
-""" 
-
-Each Application will expose one endpoint for fetching data and another endpoint for fetching filter options.
-
-Each Application will depend on one Database.
-
-Each Database will have one or more Tables.
-
-Therefore each Application will have one or more Tables.
-
-Each Table will have one or more Columns.
-
-Each Column will have one Data Type, and each Column will be classified as Category, DateTime, Fact or Other.
-"""
 # class QueryRequestFilter(PydanticBaseModel):
 #     """A filter for a query request."""
 
@@ -234,7 +220,7 @@ class QueryRequest(PydanticBaseModel):
     """A request to query an application."""
 
     kind: Literal["QueryRequest"] = "QueryRequest"
-    dataset: Dataset | None = None
+    dataset: Dataset
     table_name: str
 
     filters: list[QueryRequestFilterCategory | QueryRequestFilterFact] = []
@@ -261,24 +247,24 @@ class QueryRequest(PydanticBaseModel):
         return list(range(1, groups + 1))
 
 
-class MinMaxFilterOption(BaseModel):
+class FilterOptionMinMax(BaseModel):
     """Filter options from a column classified as Fact.
 
     Fact columns data types are always numeric.
     The filter options will be the minimum and maximum values of the column.
     """
 
-    kind: Literal["MinMaxFilterOption"]
+    kind: Literal["FilterOptionMinMax"] = "FilterOptionMinMax"
     Values: tuple[float, float]
 
 
-class CategoryFilterOption(BaseModel):
+class FilterOptionCategory(BaseModel):
     """Filter options from a column classified as Category.
 
     Category columns data types are always strings.
     The filter options will be the unique values of the column.
     """
 
-    kind: Literal["CategoryFilterOption"]
+    kind: Literal["FilterOptionCategory"] = "FilterOptionCategory"
     Values: list[str]
     ParentId: str | None = None
