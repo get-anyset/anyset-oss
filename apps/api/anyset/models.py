@@ -260,6 +260,32 @@ class QueryRequest(PydanticBaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def validate_filters(self) -> "QueryRequest":
+        """Validate that the filters exist in the table."""
+        for filter in self.filters:
+            is_category = self.dataset.is_column_classified_as(
+                filter.column_name,
+                ColumnType.Category,
+                self.table_name,
+            )
+            if filter.kind == "QueryRequestFilterCategory" and not is_category:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"QueryRequestFilterCategoryInvalidColumn {filter.column_name}",
+                )
+            is_fact = self.dataset.is_column_classified_as(
+                filter.column_name,
+                ColumnType.Fact,
+                self.table_name,
+            )
+            if filter.kind == "QueryRequestFilterFact" and not is_fact:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"QueryRequestFilterFactInvalidColumn {filter.column_name}",
+                )
+        return self
+
 
 class FilterOptionMinMax(BaseModel):
     """Filter options from a column classified as Fact.
