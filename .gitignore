@@ -17,3 +17,4 @@ node_modules
 .nx/
 @mf-types/
 __pycache__/
+dist/
