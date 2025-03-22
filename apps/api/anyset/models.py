@@ -3,8 +3,9 @@
 from enum import Enum
 from typing import Literal
 
+from fastapi import HTTPException, status
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import computed_field
+from pydantic import computed_field, model_validator
 from slugify import slugify
 
 
@@ -124,10 +125,11 @@ class Dataset(BaseModel):
         self,
         column_name: str,
         column_type: ColumnType,
+        table_name: str,
     ) -> bool:
         """Check if a column is classified as a given type."""
         try:
-            column_names = getattr(self, f"_DatasetColumns{column_type}")
+            column_names = getattr(self, f"_DatasetColumns{column_type.value}")[table_name]
         except KeyError as ex:
             raise ValueError(f"InvalidColumnType {column_type}") from ex
 
@@ -158,6 +160,7 @@ class Dataset(BaseModel):
 class QueryRequestFilterCategory(PydanticBaseModel):
     """The filter model for category columns."""
 
+    kind: Literal["QueryRequestFilterCategory"] = "QueryRequestFilterCategory"
     column_name: str
     values: list[str]
 
@@ -165,6 +168,7 @@ class QueryRequestFilterCategory(PydanticBaseModel):
 class QueryRequestFilterFact(PydanticBaseModel):
     """The filter model for category columns."""
 
+    kind: Literal["QueryRequestFilterFact"] = "QueryRequestFilterFact"
     column_name: str
     values: list[float]
 
@@ -245,6 +249,16 @@ class QueryRequest(PydanticBaseModel):
         """
         groups = 0 if self.breakdown is None else 1 + len(self.select)
         return list(range(1, groups + 1))
+
+    @model_validator(mode="after")
+    def validate_table_name(self) -> "QueryRequest":
+        """Validate that the table_name exists in the dataset."""
+        if self.table_name not in [t.name for t in self.dataset.dataset_tables.values()]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"TableNotFound {self.dataset._id}:{self.table_name}",
+            )
+        return self
 
 
 class FilterOptionMinMax(BaseModel):
