@@ -170,7 +170,7 @@ class QueryRequestFilterFact(PydanticBaseModel):
 
     kind: Literal["QueryRequestFilterFact"] = "QueryRequestFilterFact"
     column_name: str
-    values: list[float]
+    values: tuple[float | None, float] | tuple[float, float | None]
 
 
 class QueryRequestSelect(PydanticBaseModel):
