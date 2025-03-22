@@ -1,0 +1,33 @@
+name        = "Sample Dataset"
+description = "A sample app for the AnySet Framework"
+
+path_prefix = "sample"
+version     = 1
+
+[dataset_tables.BASE_TABLE]
+name = "BASE_TABLE"
+
+[dataset_tables.BASE_TABLE.columns.ID]
+name             = "ID"
+column_type      = "Other"
+column_data_type = "String"
+
+[dataset_tables.BASE_TABLE.columns.NAME]
+name             = "NAME"
+column_type      = "Other"
+column_data_type = "String"
+
+[dataset_tables.BASE_TABLE.columns.STATE]
+name             = "STATE"
+column_type      = "Category"
+column_data_type = "String"
+
+[dataset_tables.BASE_TABLE.columns.TRANSACTION_AMOUNT]
+name             = "TRANSACTION_AMOUNT"
+column_type      = "Fact"
+column_data_type = "Number"
+
+[dataset_tables.BASE_TABLE.columns.TRANSACTION_DATE]
+name             = "TRANSACTION_DATE"
+column_type      = "DateTime"
+column_data_type = "DateTime"
