@@ -4,6 +4,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from anyset.controllers import router as anyset_router
 from anyset.settings import Settings, settings
 
 
@@ -48,36 +49,7 @@ async def root() -> dict[str, str]:
     return {"message": "Welcome to the Microfrontend API"}
 
 
-@app.get("/api/items")
-async def get_items() -> list[dict]:
-    """Get a list of items.
-
-    Returns:
-        list: A list of items with their details
-    """
-    return [
-        {"id": 1, "name": "Item 1", "description": "Description for Item 1"},
-        {"id": 2, "name": "Item 2", "description": "Description for Item 2"},
-        {"id": 3, "name": "Item 3", "description": "Description for Item 3"},
-    ]
-
-
-# Example of using settings as a dependency in a route
-@app.get("/api/info")
-async def get_info() -> dict[str, str]:
-    """Get API information.
-
-    Args:
-        settings: Application settings from dependency injection
-
-    Returns:
-        dict: API information
-    """
-    return {
-        "title": "settings.title",
-        "version": "settings.version",
-        "description": "settings.description",
-    }
+app.include_router(anyset_router)
 
 
 if __name__ == "__main__":
