@@ -76,6 +76,7 @@ class Dataset(BaseModel):
     path_prefix: str
     version: int
     dataset_tables: dict[str, DatasetTable]
+    custom_aggregation_functions: dict[str, str] | None = None
 
     @computed_field
     @property
@@ -295,7 +296,7 @@ class QueryRequest(PydanticBaseModel):
                 s = QueryRequestSelect(column_name=select, alias=select)
             elif isinstance(select, tuple):
                 s = QueryRequestSelect(column_name=select[0], alias=select[1])
-            elif isinstance(select, QueryRequestSelect):
+            else:
                 s = select
 
             if s.column_name not in [
@@ -305,9 +306,62 @@ class QueryRequest(PydanticBaseModel):
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"SelectColumnNotFound {s.column_name}",
                 )
+
             normalized_select.append(s)
 
         self.select = normalized_select  # type: ignore
+        return self
+
+    @model_validator(mode="after")
+    def validate_aggregations(self) -> "QueryRequest":
+        """Validate that the aggregations exist in the table."""
+        normalized_aggregations: list[QueryRequestAggregation | QueryRequestCustomAggregation] = []
+        #     aggregations: list[
+        #     tuple[str, AggregationFunction, str]
+        #     | QueryRequestAggregation
+        #     | tuple[str, str]
+        #     | QueryRequestCustomAggregation
+        # ] = []
+        for aggregation in self.aggregations:
+            agg: QueryRequestAggregation | QueryRequestCustomAggregation
+
+            if isinstance(aggregation, tuple) and len(aggregation) == 3:
+                agg = QueryRequestAggregation(
+                    column_name=aggregation[0],
+                    aggregation_function=aggregation[1],
+                    alias=aggregation[2],
+                )
+            elif isinstance(aggregation, tuple) and len(aggregation) == 2:
+                agg = QueryRequestCustomAggregation(
+                    aggregation_function=aggregation[0],
+                    alias=aggregation[1],
+                )
+            elif not isinstance(aggregation, tuple):
+                agg = aggregation
+
+            if agg.kind == "QueryRequestCustomAggregation" and (
+                self.dataset.custom_aggregation_functions is None
+                or agg.aggregation_function
+                not in self.dataset.custom_aggregation_functions.values()
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"CustomAggregationFunctionNotFound {agg.aggregation_function}",
+                )
+
+            if agg.kind == "QueryRequestAggregation" and not self.dataset.is_column_classified_as(
+                column_name=agg.column_name,
+                column_type=ColumnType.Fact,
+                table_name=self.table_name,
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"AggregationColumnNotFound {agg.column_name}",
+                )
+
+            normalized_aggregations.append(agg)
+
+        self.aggregations = normalized_aggregations  # type: ignore
         return self
 
 
