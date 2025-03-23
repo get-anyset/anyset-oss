@@ -230,6 +230,22 @@ class QueryRequest(PydanticBaseModel):
     table_name: str
 
     filters: list[QueryRequestFilterCategory | QueryRequestFilterFact] = []
+    select: list[QueryRequestSelect] = []
+    aggregations: list[QueryRequestAggregation | QueryRequestCustomAggregation] = []
+    order_by: list[QueryRequestOrderBy] = [QueryRequestOrderBy(column_name="1", direction="ASC")]
+    pagination: QueryRequestPagination = QueryRequestPagination(limit=100, offset=0)
+
+    breakdown: str | None = None
+
+
+class QueryRequestDTO(PydanticBaseModel):
+    """A request to query a dataset."""
+
+    kind: Literal["QueryRequestDTO"] = "QueryRequestDTO"
+    dataset: Dataset
+    table_name: str
+
+    filters: list[QueryRequestFilterCategory | QueryRequestFilterFact] = []
     select: list[str | tuple[str, str] | QueryRequestSelect] = []
     aggregations: list[
         tuple[str, AggregationFunction, str]
@@ -237,8 +253,12 @@ class QueryRequest(PydanticBaseModel):
         | tuple[str, str]
         | QueryRequestCustomAggregation
     ] = []
-    order_by: list[tuple[str, OrderByDirection] | QueryRequestOrderBy] = [("1", "ASC")]
-    pagination: tuple[int, int] | QueryRequestPagination = (0, 100)
+    order_by: list[tuple[str, OrderByDirection] | QueryRequestOrderBy] = [
+        QueryRequestOrderBy(column_name="1", direction="ASC")
+    ]
+    pagination: tuple[int, int] | QueryRequestPagination = QueryRequestPagination(
+        limit=100, offset=0
+    )
 
     breakdown: str | None = None
 
@@ -253,7 +273,7 @@ class QueryRequest(PydanticBaseModel):
         return list(range(1, groups + 1))
 
     @model_validator(mode="after")
-    def validate_table_name(self) -> "QueryRequest":
+    def validate_table_name(self) -> "QueryRequestDTO":
         """Validate the table_name exists in the dataset."""
         if self.table_name not in [t.name for t in self.dataset.dataset_tables.values()]:
             raise HTTPException(
@@ -263,7 +283,7 @@ class QueryRequest(PydanticBaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_filters(self) -> "QueryRequest":
+    def validate_filters(self) -> "QueryRequestDTO":
         """Validate the filter columns exist in the table and values match the column data type."""
         for filter in self.filters:
             is_category = self.dataset.is_column_classified_as(
@@ -289,7 +309,7 @@ class QueryRequest(PydanticBaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_select(self) -> "QueryRequest":
+    def validate_select(self) -> "QueryRequestDTO":
         """Validate the select columns exist in the table."""
         normalized_select: list[QueryRequestSelect] = []
         for select in self.select:
@@ -314,7 +334,7 @@ class QueryRequest(PydanticBaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_aggregations(self) -> "QueryRequest":
+    def validate_aggregations(self) -> "QueryRequestDTO":
         """Validate the aggregations."""
         normalized_aggregations: list[QueryRequestAggregation | QueryRequestCustomAggregation] = []
         for aggregation in self.aggregations:
@@ -359,7 +379,7 @@ class QueryRequest(PydanticBaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_order_by(self) -> "QueryRequest":
+    def validate_order_by(self) -> "QueryRequestDTO":
         """Validate sorting columns exist in the table."""
         normalized_order_by: list[QueryRequestOrderBy] = []
         for order_by in self.order_by:
@@ -374,7 +394,7 @@ class QueryRequest(PydanticBaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_pagination(self) -> "QueryRequest":
+    def validate_pagination(self) -> "QueryRequestDTO":
         """Validate the pagination."""
         if isinstance(self.pagination, tuple) and (
             self.pagination[0] < 0 or self.pagination[1] <= 0
@@ -401,7 +421,7 @@ class QueryResponseColumn(PydanticBaseModel):
     data: list[str | None] | list[float | None] | list[bool | None] | list[datetime | None]
 
 
-class QueryResponse(PydanticBaseModel):
+class QueryResponseDTO(PydanticBaseModel):
     """A response to a query request."""
 
     kind: Literal["QueryResponse"] = "QueryResponse"
@@ -444,4 +464,4 @@ class FilterOptionCategory(BaseModel):
     parent_id: str | None = None
 
 
-FilterOptions = list[FilterOptionMinMax | FilterOptionCategory]
+FilterOptionsDTO = list[FilterOptionMinMax | FilterOptionCategory]

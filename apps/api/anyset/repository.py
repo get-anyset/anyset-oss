@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 
-from .models import FilterOptions, QueryRequest, QueryResponse
+from .models import FilterOptionsDTO, QueryRequest, QueryResponseDTO
 
 
 class RepositoryPort(ABC):
@@ -13,7 +13,7 @@ class RepositoryPort(ABC):
     """
 
     @abstractmethod
-    async def execute_query(self, query: QueryRequest) -> QueryResponse:
+    async def execute_query(self, query: QueryRequest) -> QueryResponseDTO:
         """Execute a query on a dataset.
 
         Args:
@@ -25,7 +25,7 @@ class RepositoryPort(ABC):
         raise NotImplementedError("Method execute_query must be implemented by subclasses")
 
     @abstractmethod
-    async def get_filter_options(self) -> FilterOptions:
+    async def get_filter_options(self) -> FilterOptionsDTO:
         """Get filter options for building query filters.
 
         Returns:
