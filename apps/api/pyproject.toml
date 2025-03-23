@@ -11,6 +11,7 @@ dependencies    = [
     "python-slugify>=8.0.4",
     "tomli>=2.2.1",
     "orjson>=3.10.15",
+    "psycopg2-binary>=2.9.10",
 ]
 requires-python = ">=3.12"
 
@@ -86,4 +87,5 @@ skip-magic-trailing-comma = false
 [dependency-groups]
 dev = [
     "mypy>=1.15.0",
+    "types-psycopg2>=2.9.21.20250318",
 ]
