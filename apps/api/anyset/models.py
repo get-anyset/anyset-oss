@@ -1,5 +1,6 @@
 """Models for the AnySet Framework."""
 
+from datetime import datetime
 from enum import Enum
 from typing import Literal
 
@@ -222,7 +223,7 @@ class QueryRequestPagination(PydanticBaseModel):
 
 
 class QueryRequest(PydanticBaseModel):
-    """A request to query an application."""
+    """A request to query a dataset."""
 
     kind: Literal["QueryRequest"] = "QueryRequest"
     dataset: Dataset
@@ -358,6 +359,21 @@ class QueryRequest(PydanticBaseModel):
         return self
 
     @model_validator(mode="after")
+    def validate_order_by(self) -> "QueryRequest":
+        """Validate sorting columns exist in the table."""
+        normalized_order_by: list[QueryRequestOrderBy] = []
+        for order_by in self.order_by:
+            if isinstance(order_by, tuple):
+                normalized_order_by.append(
+                    QueryRequestOrderBy(column_name=order_by[0], direction=order_by[1])
+                )
+            else:
+                normalized_order_by.append(order_by)
+
+        self.order_by = normalized_order_by  # type: ignore
+        return self
+
+    @model_validator(mode="after")
     def validate_pagination(self) -> "QueryRequest":
         """Validate the pagination."""
         if isinstance(self.pagination, tuple) and (
@@ -374,6 +390,25 @@ class QueryRequest(PydanticBaseModel):
                 limit=self.pagination[1],
             )
         return self
+
+
+class QueryResponseColumn(PydanticBaseModel):
+    """A column in a query response."""
+
+    kind: Literal["QueryResponseColumn"] = "QueryResponseColumn"
+    alias: str
+    breakdown: str | None = None
+    data: list[str | None] | list[float | None] | list[bool | None] | list[datetime | None]
+
+
+class QueryResponse(PydanticBaseModel):
+    """A response to a query request."""
+
+    kind: Literal["QueryResponse"] = "QueryResponse"
+    dataset: str
+    version: int
+    rows: int
+    columns: list[QueryResponseColumn]
 
 
 class FilterOptionMinMax(BaseModel):
