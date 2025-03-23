@@ -289,26 +289,25 @@ class QueryRequest(PydanticBaseModel):
     @model_validator(mode="after")
     def validate_select(self) -> "QueryRequest":
         """Validate that the select columns exist in the table."""
-        normalized_select = []
+        normalized_select: list[QueryRequestSelect] = []
         for select in self.select:
             if isinstance(select, str):
-                s = (select, select)
+                s = QueryRequestSelect(column_name=select, alias=select)
             elif isinstance(select, tuple):
-                s = select
+                s = QueryRequestSelect(column_name=select[0], alias=select[1])
             elif isinstance(select, QueryRequestSelect):
-                s = (select.column_name, select.alias or select.column_name)
+                s = select
 
-            if s[0] not in [
+            if s.column_name not in [
                 c.name for c in self.dataset.dataset_tables[self.table_name].columns.values()
             ]:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"SelectColumnNotFound {s[0]}",
+                    detail=f"SelectColumnNotFound {s.column_name}",
                 )
             normalized_select.append(s)
 
-        self.select = normalized_select
-
+        self.select = normalized_select  # type: ignore
         return self
 
 
