@@ -253,7 +253,7 @@ class QueryRequest(PydanticBaseModel):
 
     @model_validator(mode="after")
     def validate_table_name(self) -> "QueryRequest":
-        """Validate that the table_name exists in the dataset."""
+        """Validate the table_name exists in the dataset."""
         if self.table_name not in [t.name for t in self.dataset.dataset_tables.values()]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -263,7 +263,7 @@ class QueryRequest(PydanticBaseModel):
 
     @model_validator(mode="after")
     def validate_filters(self) -> "QueryRequest":
-        """Validate that the filters exist in the table."""
+        """Validate the filter columns exist in the table and values match the column data type."""
         for filter in self.filters:
             is_category = self.dataset.is_column_classified_as(
                 filter.column_name,
@@ -289,7 +289,7 @@ class QueryRequest(PydanticBaseModel):
 
     @model_validator(mode="after")
     def validate_select(self) -> "QueryRequest":
-        """Validate that the select columns exist in the table."""
+        """Validate the select columns exist in the table."""
         normalized_select: list[QueryRequestSelect] = []
         for select in self.select:
             if isinstance(select, str):
@@ -314,14 +314,8 @@ class QueryRequest(PydanticBaseModel):
 
     @model_validator(mode="after")
     def validate_aggregations(self) -> "QueryRequest":
-        """Validate that the aggregations exist in the table."""
+        """Validate the aggregations."""
         normalized_aggregations: list[QueryRequestAggregation | QueryRequestCustomAggregation] = []
-        #     aggregations: list[
-        #     tuple[str, AggregationFunction, str]
-        #     | QueryRequestAggregation
-        #     | tuple[str, str]
-        #     | QueryRequestCustomAggregation
-        # ] = []
         for aggregation in self.aggregations:
             agg: QueryRequestAggregation | QueryRequestCustomAggregation
 
@@ -361,6 +355,24 @@ class QueryRequest(PydanticBaseModel):
             normalized_aggregations.append(agg)
 
         self.aggregations = normalized_aggregations  # type: ignore
+        return self
+
+    @model_validator(mode="after")
+    def validate_pagination(self) -> "QueryRequest":
+        """Validate the pagination."""
+        if isinstance(self.pagination, tuple) and (
+            self.pagination[0] < 0 or self.pagination[1] <= 0
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"InvalidPaginationParameters skip={self.pagination[0]} limit={self.pagination[1]}",  # noqa: E501
+            )
+
+        if isinstance(self.pagination, tuple):
+            self.pagination = QueryRequestPagination(
+                offset=self.pagination[0],
+                limit=self.pagination[1],
+            )
         return self
 
 
