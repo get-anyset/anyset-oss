@@ -1,6 +1,6 @@
 """Controllers for the AnySet API."""
 
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import ORJSONResponse
