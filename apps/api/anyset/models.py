@@ -341,8 +341,7 @@ class QueryRequest(PydanticBaseModel):
 
             if agg.kind == "QueryRequestCustomAggregation" and (
                 self.dataset.custom_aggregation_functions is None
-                or agg.aggregation_function
-                not in self.dataset.custom_aggregation_functions.values()
+                or agg.aggregation_function not in self.dataset.custom_aggregation_functions
             ):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,

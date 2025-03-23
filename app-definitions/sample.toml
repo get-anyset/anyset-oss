@@ -4,6 +4,11 @@ description = "A sample app for the AnySet Framework"
 path_prefix = "sample"
 version     = 1
 
+[custom_aggregation_functions]
+SUM_OF_TRANSACTION_AMOUNT = """
+SELECT SUM(TRANSACTION_AMOUNT) FROM BASE_TABLE
+"""
+
 [dataset_tables.BASE_TABLE]
 name = "BASE_TABLE"
 
