@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import ORJSONResponse
 
 from .dependencies import inject_dataset
-from .models import QueryRequest, QueryResponse
+from .models import FilterOptions, QueryRequest, QueryResponse
 
 router = APIRouter(prefix="/api")
 
@@ -31,3 +31,14 @@ async def execute_query(
         rows=0,
         columns=[],
     )
+
+
+@router.get(
+    "/{path_prefix}/v{version}/filter-options",
+    response_class=ORJSONResponse,
+    response_model=FilterOptions,
+    response_model_exclude_none=True,
+)
+async def get_filter_options(path_prefix: str, version: int) -> FilterOptions:
+    """Get the filter options for a dataset to populate filter components in the UI."""
+    return []

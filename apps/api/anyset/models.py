@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Literal
+from typing import Generic, Literal, TypeVar
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel as PydanticBaseModel
@@ -411,6 +411,16 @@ class QueryResponse(PydanticBaseModel):
     columns: list[QueryResponseColumn]
 
 
+T = TypeVar("T")
+
+
+class FilterOptionValue(PydanticBaseModel, Generic[T]):
+    """A filter option."""
+
+    label: str
+    value: T
+
+
 class FilterOptionMinMax(BaseModel):
     """Filter options from a column classified as Fact.
 
@@ -419,7 +429,7 @@ class FilterOptionMinMax(BaseModel):
     """
 
     kind: Literal["FilterOptionMinMax"] = "FilterOptionMinMax"
-    Values: tuple[float, float]
+    values: tuple[FilterOptionValue[float], FilterOptionValue[float]]
 
 
 class FilterOptionCategory(BaseModel):
@@ -430,5 +440,8 @@ class FilterOptionCategory(BaseModel):
     """
 
     kind: Literal["FilterOptionCategory"] = "FilterOptionCategory"
-    Values: list[str]
-    ParentId: str | None = None
+    values: list[FilterOptionValue[str]]
+    parent_id: str | None = None
+
+
+FilterOptions = list[FilterOptionMinMax | FilterOptionCategory]
