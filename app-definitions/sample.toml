@@ -4,35 +4,39 @@ description = "A sample app for the AnySet Framework"
 path_prefix = "sample"
 version     = 1
 
+adapter = "PostgreSQL"
+
+database_name = "mydatabase"
+
 [custom_aggregation_functions]
 SUM_OF_TRANSACTION_AMOUNT = """
-SELECT SUM(TRANSACTION_AMOUNT) FROM BASE_TABLE
+SELECT SUM(TRANSACTION_AMOUNT) FROM cc_transactions
 """
 
-[dataset_tables.BASE_TABLE]
-name = "BASE_TABLE"
+[dataset_tables.cc_transactions]
+name = "cc_transactions"
 
-[dataset_tables.BASE_TABLE.columns.ID]
+[dataset_tables.cc_transactions.columns.ID]
 name             = "ID"
 column_type      = "Other"
 column_data_type = "String"
 
-[dataset_tables.BASE_TABLE.columns.NAME]
-name             = "NAME"
-column_type      = "Other"
-column_data_type = "String"
-
-[dataset_tables.BASE_TABLE.columns.STATE]
-name             = "STATE"
+[dataset_tables.cc_transactions.columns.NAME]
+name             = "zip"
 column_type      = "Category"
 column_data_type = "String"
 
-[dataset_tables.BASE_TABLE.columns.TRANSACTION_AMOUNT]
-name             = "TRANSACTION_AMOUNT"
+[dataset_tables.cc_transactions.columns.state]
+name             = "state"
+column_type      = "Category"
+column_data_type = "String"
+
+[dataset_tables.cc_transactions.columns.amt]
+name             = "amt"
 column_type      = "Fact"
 column_data_type = "Number"
 
-[dataset_tables.BASE_TABLE.columns.TRANSACTION_DATE]
+[dataset_tables.cc_transactions.columns.TRANSACTION_DATE]
 name             = "TRANSACTION_DATE"
 column_type      = "DateTime"
 column_data_type = "DateTime"
