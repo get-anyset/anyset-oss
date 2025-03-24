@@ -7,7 +7,7 @@ from fastapi import HTTPException, Request, status
 from pydantic import ValidationError
 
 from .models import RepositoryAdapter
-from .postgres_adapter import PostgresRepository
+from .postgres_adapter import PostgresRepository, PostgresSettings
 from .repository import QueryRequest, RepositoryPort
 from .settings import settings
 
@@ -89,7 +89,7 @@ async def get_repository(request: Request) -> RepositoryPort:
     )
 
     if dataset.adapter == RepositoryAdapter.PostgreSQL:
-        return PostgresRepository()
+        return PostgresRepository(settings=PostgresSettings(database=dataset.database_name))
     else:
         detail = f"UnsupportedRepositoryAdapter {dataset.adapter}"
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)

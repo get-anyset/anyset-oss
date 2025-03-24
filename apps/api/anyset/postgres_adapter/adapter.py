@@ -30,7 +30,9 @@ class PostgresRepository(RepositoryPort):
         Args:
             settings: PostgreSQL connection settings
         """
-        self.settings = settings
+        self.settings = PostgresSettings(
+            **{**postgres_settings.model_dump(), **settings.model_dump()}
+        )
         self._pool: Any = None
         self._setup_connection_pool()
 
@@ -151,80 +153,64 @@ class PostgresRepository(RepositoryPort):
         """
         source = f'"{query.table_name}"'
         select: list[str] = []
-        where_parts: list[str] = []
-        order_by_parts: list[str] = []
+        where: list[str] = []
+        order_by: list[str] = []
+
         params: dict[str, Any] = {}
         param_idx = 0
 
-        for s in query.select:
-            select.append(f'"{s.column_name}" AS "{s.alias or s.column_name}"')
+        for qselect in query.select:
+            select.append(f'"{qselect.column_name}" AS "{qselect.alias or qselect.column_name}"')
 
             # Add to group by if needed
             # if query.breakdown is not None:
             #     group_by_parts.append(f'"{column_name}"')
 
-        for a in query.aggregations:
-            if isinstance(a, QueryRequestAggregation):
-                select.append(f'{a.aggregation_function}("{a.column_name}") AS "{a.alias}"')
-            elif isinstance(a, QueryRequestCustomAggregation):
-                select.append(f'{a.aggregation_function} AS "{a.alias}"')
+        for qagg in query.aggregations:
+            if isinstance(qagg, QueryRequestAggregation):
+                select.append(
+                    f'{qagg.aggregation_function}("{qagg.column_name}") AS "{qagg.alias}"'
+                )
+            elif isinstance(qagg, QueryRequestCustomAggregation):
+                select.append(f'{qagg.aggregation_function} AS "{qagg.alias}"')
 
-        for f in query.filters:
-            if f.kind == "QueryRequestFilterCategory" and f.values:
+        for qfilter in query.filters:
+            if qfilter.kind == "QueryRequestFilterCategory" and qfilter.values:
                 param_name = f"p{param_idx}"
-                where_parts.append(f'"{f.column_name}" IN (%({param_name})s)')
-                params[param_name] = f"{','.join(f.values)}"
+                where.append(f'"{qfilter.column_name}" IN (%({param_name})s)')
+                params[param_name] = f"{','.join(qfilter.values)}"
                 param_idx += 1
-            elif f.kind == "QueryRequestFilterFact" and f.values:
-                min_val, max_val = f.values
+            elif qfilter.kind == "QueryRequestFilterFact" and qfilter.values:
+                min_val, max_val = qfilter.values
 
                 if min_val is not None:
                     param_name = f"p{param_idx}"
-                    where_parts.append(f'"{f.column_name}" >= %({param_name})s')
+                    where.append(f'"{qfilter.column_name}" >= %({param_name})s')
                     params[param_name] = min_val
                     param_idx += 1
 
                 if max_val is not None:
                     param_name = f"p{param_idx}"
-                    where_parts.append(f'"{f.column_name}" <= %({param_name})s')
+                    where.append(f'"{qfilter.column_name}" <= %({param_name})s')
                     params[param_name] = max_val  # This is a single value, not a list
                     param_idx += 1
 
-        # Process order by
-        for order in query.order_by:
-            if isinstance(order, tuple):
-                col, direction = order
-                order_by_parts.append(f'"{col}" {direction}')
-            else:
-                order_by_parts.append(f'"{order.column_name}" {order.direction}')
+        for qorder in query.order_by:
+            order_by.append(f'"{qorder.column_name}" {qorder.direction}')
 
-        # Process pagination
-        limit = None
-        offset = None
+        offset = query.pagination.offset
+        limit = query.pagination.limit
 
-        if isinstance(query.pagination, tuple):
-            offset, limit = query.pagination
-        else:
-            offset = query.pagination.offset
-            limit = query.pagination.limit
+        sql = f"SELECT {', '.join(select) or '*'} FROM {source}"
 
-        # Build the final SQL
-        sql = f"""
-        SELECT {", ".join(select) or "*"} FROM {source}
-        """
-
-        if where_parts:
-            sql += f" WHERE {' AND '.join(where_parts)}"
-
+        if where:
+            sql += f" WHERE {' AND '.join(where)}"
         if query.group_by:
             sql += f" GROUP BY {', '.join(query.group_by)}"
-
-        if order_by_parts:
-            sql += f" ORDER BY {', '.join(order_by_parts)}"
-
+        if order_by:
+            sql += f" ORDER BY {', '.join(order_by)}"
         if limit is not None:
             sql += f" LIMIT {limit}"
-
         if offset is not None:
             sql += f" OFFSET {offset}"
 

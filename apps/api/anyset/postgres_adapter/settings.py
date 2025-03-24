@@ -22,7 +22,7 @@ class PostgresSettings(BaseSettings):
     port: int = 5432
     user: str = "postgres"
     password: str = ""
-    database: str = "anyset"
+    database: str = ""
 
     pool_min_size: int = 1
     pool_max_size: int = 10
