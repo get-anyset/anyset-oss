@@ -1,28 +1,21 @@
 """PostgreSQL adapter for the AnySet repository."""
 
 import logging
-from typing import Any, cast
+from typing import Any
 
 import psycopg2
 import psycopg2.pool
 from psycopg2.extras import RealDictCursor
 
-# Local application imports
 from ..models import (
+    BaseResultsetColumn,
     FilterOptionCategory,
     FilterOptionMinMax,
-    QueryRequest,
     QueryRequestAggregation,
     QueryRequestCustomAggregation,
     QueryRequestSelect,
 )
-from ..models import (
-    FilterOptionsDTO as FilterOptions,
-)
-from ..models import (
-    QueryResponseDTO as QueryResponse,
-)
-from ..repository import RepositoryPort
+from ..repository import FilterOptions, QueryRequest, RepositoryPort, Resultset
 from .settings import PostgresSettings, postgres_settings
 
 logger = logging.getLogger(__name__)
@@ -62,7 +55,7 @@ class PostgresRepository(RepositoryPort):
         except psycopg2.Error as ex:
             raise RuntimeError(f"FailedConnectPostgreSQLConnectionPool {ex}") from ex
 
-    async def execute_query(self, query: QueryRequest) -> QueryResponse:
+    async def execute_query(self, query: QueryRequest) -> Resultset:
         """Execute a query on a PostgreSQL database.
 
         Args:
@@ -79,14 +72,24 @@ class PostgresRepository(RepositoryPort):
             conn = self._pool.getconn()
 
             sql, params = self._build_sql_query(query)
+            print(query.group_by)
+            print(sql)
+            print(params)
 
             with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                 cursor.execute(sql, params)
                 rows = cursor.fetchall()
 
-                columns = [desc[0] for desc in cursor.description]
+                columns = [
+                    BaseResultsetColumn(
+                        alias=desc[0],
+                        breakdown=None,
+                        data=[r[desc[0]] for r in rows],
+                    )
+                    for desc in cursor.description
+                ]
 
-                return QueryResponse(
+                return Resultset(
                     dataset=query.dataset._id,
                     version=query.dataset.version,
                     rows=len(rows),
@@ -127,7 +130,7 @@ class PostgresRepository(RepositoryPort):
                 numeric_options = self._get_numeric_filter_options(cursor)
                 filter_options.extend(numeric_options)
 
-            return cast(FilterOptions, filter_options)
+            return filter_options
 
         except psycopg2.Error as e:
             logger.error("Error getting filter options: %s", e)
@@ -146,84 +149,44 @@ class PostgresRepository(RepositoryPort):
         Returns:
             Tuple of SQL string and parameters
         """
-        # Start building the SQL query
-        select_parts: list[str] = []
-        from_part = f'"{query.table_name}"'
+        source = f'"{query.table_name}"'
+        select: list[str] = []
         where_parts: list[str] = []
-        group_by_parts: list[str] = []
         order_by_parts: list[str] = []
         params: dict[str, Any] = {}
         param_idx = 0
 
-        # Process select fields - handle both normalized and non-normalized selects
-        select_fields: list[QueryRequestSelect] = []
-        for select in query.select:
-            if isinstance(select, str):
-                select_fields.append(
-                    QueryRequestSelect(kind="QueryRequestSelect", column_name=select, alias=select)
-                )
-            elif isinstance(select, tuple):
-                select_fields.append(
-                    QueryRequestSelect(
-                        kind="QueryRequestSelect", column_name=select[0], alias=select[1]
-                    )
-                )
-            elif isinstance(select, QueryRequestSelect):
-                select_fields.append(select)
-
-        for select_field in select_fields:
-            column_name = select_field.column_name
-            alias = select_field.alias or column_name
-            select_parts.append(f'"{column_name}" AS "{alias}"')
+        for s in query.select:
+            select.append(f'"{s.column_name}" AS "{s.alias or s.column_name}"')
 
             # Add to group by if needed
-            if query.breakdown is not None:
-                group_by_parts.append(f'"{column_name}"')
+            # if query.breakdown is not None:
+            #     group_by_parts.append(f'"{column_name}"')
 
-        # Process aggregations
-        for agg in query.aggregations:
-            if isinstance(agg, QueryRequestAggregation):
-                # Standard aggregation
-                column_name = agg.column_name
-                agg_func = agg.aggregation_function
-                alias = agg.alias
-                select_parts.append(f'{agg_func}("{column_name}") AS "{alias}"')
-            elif isinstance(agg, QueryRequestCustomAggregation):
-                # Custom aggregation
-                select_parts.append(f'{agg.aggregation_function} AS "{agg.alias}"')
-            elif isinstance(agg, tuple) and len(agg) == 3:
-                # Handle tuple[str, AggregationFunction, str]
-                column_name, agg_func, alias = agg
-                select_parts.append(f'{agg_func}("{column_name}") AS "{alias}"')
-            elif isinstance(agg, tuple) and len(agg) == 2:
-                # Handle tuple[str, str] for custom aggregation
-                agg_func, alias = agg
-                select_parts.append(f'{agg_func} AS "{alias}"')
+        for a in query.aggregations:
+            if isinstance(a, QueryRequestAggregation):
+                select.append(f'{a.aggregation_function}("{a.column_name}") AS "{a.alias}"')
+            elif isinstance(a, QueryRequestCustomAggregation):
+                select.append(f'{a.aggregation_function} AS "{a.alias}"')
 
-        # Process filters
-        for filter in query.filters:
-            if filter.kind == "QueryRequestFilterCategory":
-                # Category filter
-                col_name = filter.column_name
-                if filter.values:
-                    param_name = f"p{param_idx}"
-                    where_parts.append(f'"{col_name}" = ANY(%({param_name})s)')
-                    params[param_name] = filter.values
-                    param_idx += 1
-            elif filter.kind == "QueryRequestFilterFact":
-                # Fact filter (numeric range)
-                col_name = filter.column_name
-                min_val, max_val = filter.values
+        for f in query.filters:
+            if f.kind == "QueryRequestFilterCategory" and f.values:
+                param_name = f"p{param_idx}"
+                where_parts.append(f'"{f.column_name}" IN (%({param_name})s)')
+                params[param_name] = f"{','.join(f.values)}"
+                param_idx += 1
+            elif f.kind == "QueryRequestFilterFact" and f.values:
+                min_val, max_val = f.values
 
                 if min_val is not None:
                     param_name = f"p{param_idx}"
-                    where_parts.append(f'"{col_name}" >= %({param_name})s')
-                    params[param_name] = min_val  # This is a single value, not a list
+                    where_parts.append(f'"{f.column_name}" >= %({param_name})s')
+                    params[param_name] = min_val
                     param_idx += 1
 
                 if max_val is not None:
                     param_name = f"p{param_idx}"
-                    where_parts.append(f'"{col_name}" <= %({param_name})s')
+                    where_parts.append(f'"{f.column_name}" <= %({param_name})s')
                     params[param_name] = max_val  # This is a single value, not a list
                     param_idx += 1
 
@@ -246,13 +209,15 @@ class PostgresRepository(RepositoryPort):
             limit = query.pagination.limit
 
         # Build the final SQL
-        sql = f"SELECT {', '.join(select_parts) or '*'} FROM {from_part}"
+        sql = f"""
+        SELECT {", ".join(select) or "*"} FROM {source}
+        """
 
         if where_parts:
             sql += f" WHERE {' AND '.join(where_parts)}"
 
-        if group_by_parts:
-            sql += f" GROUP BY {', '.join(group_by_parts)}"
+        if query.group_by:
+            sql += f" GROUP BY {', '.join(query.group_by)}"
 
         if order_by_parts:
             sql += f" ORDER BY {', '.join(order_by_parts)}"

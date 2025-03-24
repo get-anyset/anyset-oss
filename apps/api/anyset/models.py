@@ -4,9 +4,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Generic, Literal, TypeVar
 
-from fastapi import HTTPException, status
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import computed_field, model_validator
+from pydantic import computed_field
 from slugify import slugify
 
 
@@ -17,7 +16,7 @@ class BaseModel(PydanticBaseModel):
     name: str
     description: str | None = None
 
-    @computed_field
+    @computed_field  # type: ignore
     @property
     def _id(self) -> str:
         """The ID of the model."""
@@ -70,16 +69,30 @@ class DatasetTable(BaseModel):
     columns: dict[str, DatasetTableColumn]
 
 
+class RepositoryAdapter(str, Enum):
+    """The repository adapter options."""
+
+    InMemory = "InMemory"
+    PostgreSQL = "PostgreSQL"
+    Snowflake = "Snowflake"
+    Custom = "Custom"
+
+
 class Dataset(BaseModel):
     """A dataset is a collection of data tables."""
 
     kind: Literal["Dataset"] = "Dataset"
     path_prefix: str
     version: int
+
+    database_name: str
     dataset_tables: dict[str, DatasetTable]
     custom_aggregation_functions: dict[str, str] | None = None
 
-    @computed_field
+    adapter: RepositoryAdapter
+    # custom_adapter_path: str | None = None
+
+    @computed_field  # type: ignore
     @property
     def _DatasetColumnsCategory(self) -> dict[str, list[str]]:
         """Dictionary of table names and their category columns."""
@@ -88,7 +101,7 @@ class Dataset(BaseModel):
             for t in self.dataset_tables.values()
         }
 
-    @computed_field
+    @computed_field  # type: ignore
     @property
     def _DatasetColumnsDateTime(self) -> dict[str, list[str]]:
         """Dictionary of table names and their date-time columns."""
@@ -97,7 +110,7 @@ class Dataset(BaseModel):
             for t in self.dataset_tables.values()
         }
 
-    @computed_field
+    @computed_field  # type: ignore
     @property
     def _DatasetColumnsFact(self) -> dict[str, list[str]]:
         """Dictionary of table names and their fact columns."""
@@ -106,7 +119,7 @@ class Dataset(BaseModel):
             for t in self.dataset_tables.values()
         }
 
-    @computed_field
+    @computed_field  # type: ignore
     @property
     def _DatasetColumnsOther(self) -> dict[str, list[str]]:
         """Dictionary of table names and their other columns."""
@@ -222,213 +235,54 @@ class QueryRequestPagination(PydanticBaseModel):
     offset: int | None = 0
 
 
-class QueryRequest(PydanticBaseModel):
-    """A request to query a dataset."""
+class BaseQueryRequest(PydanticBaseModel):
+    """Base for a query extended by QueryRequestDTO and (repository) Query."""
 
-    kind: Literal["QueryRequest"] = "QueryRequest"
-    dataset: Dataset
     table_name: str
 
     filters: list[QueryRequestFilterCategory | QueryRequestFilterFact] = []
     select: list[QueryRequestSelect] = []
     aggregations: list[QueryRequestAggregation | QueryRequestCustomAggregation] = []
-    order_by: list[QueryRequestOrderBy] = [QueryRequestOrderBy(column_name="1", direction="ASC")]
+    order_by: list[QueryRequestOrderBy] = []
     pagination: QueryRequestPagination = QueryRequestPagination(limit=100, offset=0)
 
     breakdown: str | None = None
 
-
-class QueryRequestDTO(PydanticBaseModel):
-    """A request to query a dataset."""
-
-    kind: Literal["QueryRequestDTO"] = "QueryRequestDTO"
-    dataset: Dataset
-    table_name: str
-
-    filters: list[QueryRequestFilterCategory | QueryRequestFilterFact] = []
-    select: list[str | tuple[str, str] | QueryRequestSelect] = []
-    aggregations: list[
-        tuple[str, AggregationFunction, str]
-        | QueryRequestAggregation
-        | tuple[str, str]
-        | QueryRequestCustomAggregation
-    ] = []
-    order_by: list[tuple[str, OrderByDirection] | QueryRequestOrderBy] = [
-        QueryRequestOrderBy(column_name="1", direction="ASC")
-    ]
-    pagination: tuple[int, int] | QueryRequestPagination = QueryRequestPagination(
-        limit=100, offset=0
-    )
-
-    breakdown: str | None = None
-
-    @computed_field
+    @computed_field  # type: ignore
     @property
-    def group_by(self) -> list[int]:
+    def group_by(self) -> list[str]:
         """The group by for the query request.
 
         Group by is a virtual property calculated from 'select' and 'breakdown'.
         """
-        groups = 0 if self.breakdown is None else 1 + len(self.select)
-        return list(range(1, groups + 1))
+        group_by_columns = set()
 
-    @model_validator(mode="after")
-    def validate_table_name(self) -> "QueryRequestDTO":
-        """Validate the table_name exists in the dataset."""
-        if self.table_name not in [t.name for t in self.dataset.dataset_tables.values()]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"TableNotFound {self.dataset._id}:{self.table_name}",
-            )
-        return self
+        for s in self.select:
+            group_by_columns.add(s.alias or s.column_name)
+        for o in self.order_by:
+            group_by_columns.add(o.column_name)
+        if self.breakdown is not None:
+            group_by_columns.add(self.breakdown)
 
-    @model_validator(mode="after")
-    def validate_filters(self) -> "QueryRequestDTO":
-        """Validate the filter columns exist in the table and values match the column data type."""
-        for filter in self.filters:
-            is_category = self.dataset.is_column_classified_as(
-                filter.column_name,
-                ColumnType.Category,
-                self.table_name,
-            )
-            if filter.kind == "QueryRequestFilterCategory" and not is_category:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"QueryRequestFilterCategoryInvalidColumn {filter.column_name}",
-                )
-            is_fact = self.dataset.is_column_classified_as(
-                filter.column_name,
-                ColumnType.Fact,
-                self.table_name,
-            )
-            if filter.kind == "QueryRequestFilterFact" and not is_fact:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"QueryRequestFilterFactInvalidColumn {filter.column_name}",
-                )
-        return self
-
-    @model_validator(mode="after")
-    def validate_select(self) -> "QueryRequestDTO":
-        """Validate the select columns exist in the table."""
-        normalized_select: list[QueryRequestSelect] = []
-        for select in self.select:
-            if isinstance(select, str):
-                s = QueryRequestSelect(column_name=select, alias=select)
-            elif isinstance(select, tuple):
-                s = QueryRequestSelect(column_name=select[0], alias=select[1])
-            else:
-                s = select
-
-            if s.column_name not in [
-                c.name for c in self.dataset.dataset_tables[self.table_name].columns.values()
-            ]:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"SelectColumnNotFound {s.column_name}",
-                )
-
-            normalized_select.append(s)
-
-        self.select = normalized_select  # type: ignore
-        return self
-
-    @model_validator(mode="after")
-    def validate_aggregations(self) -> "QueryRequestDTO":
-        """Validate the aggregations."""
-        normalized_aggregations: list[QueryRequestAggregation | QueryRequestCustomAggregation] = []
-        for aggregation in self.aggregations:
-            agg: QueryRequestAggregation | QueryRequestCustomAggregation
-
-            if isinstance(aggregation, tuple) and len(aggregation) == 3:
-                agg = QueryRequestAggregation(
-                    column_name=aggregation[0],
-                    aggregation_function=aggregation[1],
-                    alias=aggregation[2],
-                )
-            elif isinstance(aggregation, tuple) and len(aggregation) == 2:
-                agg = QueryRequestCustomAggregation(
-                    aggregation_function=aggregation[0],
-                    alias=aggregation[1],
-                )
-            elif not isinstance(aggregation, tuple):
-                agg = aggregation
-
-            if agg.kind == "QueryRequestCustomAggregation" and (
-                self.dataset.custom_aggregation_functions is None
-                or agg.aggregation_function not in self.dataset.custom_aggregation_functions
-            ):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"CustomAggregationFunctionNotFound {agg.aggregation_function}",
-                )
-
-            if agg.kind == "QueryRequestAggregation" and not self.dataset.is_column_classified_as(
-                column_name=agg.column_name,
-                column_type=ColumnType.Fact,
-                table_name=self.table_name,
-            ):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"AggregationColumnNotFound {agg.column_name}",
-                )
-
-            normalized_aggregations.append(agg)
-
-        self.aggregations = normalized_aggregations  # type: ignore
-        return self
-
-    @model_validator(mode="after")
-    def validate_order_by(self) -> "QueryRequestDTO":
-        """Validate sorting columns exist in the table."""
-        normalized_order_by: list[QueryRequestOrderBy] = []
-        for order_by in self.order_by:
-            if isinstance(order_by, tuple):
-                normalized_order_by.append(
-                    QueryRequestOrderBy(column_name=order_by[0], direction=order_by[1])
-                )
-            else:
-                normalized_order_by.append(order_by)
-
-        self.order_by = normalized_order_by  # type: ignore
-        return self
-
-    @model_validator(mode="after")
-    def validate_pagination(self) -> "QueryRequestDTO":
-        """Validate the pagination."""
-        if isinstance(self.pagination, tuple) and (
-            self.pagination[0] < 0 or self.pagination[1] <= 0
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"InvalidPaginationParameters skip={self.pagination[0]} limit={self.pagination[1]}",  # noqa: E501
-            )
-
-        if isinstance(self.pagination, tuple):
-            self.pagination = QueryRequestPagination(
-                offset=self.pagination[0],
-                limit=self.pagination[1],
-            )
-        return self
+        return list(group_by_columns)
 
 
-class QueryResponseColumn(PydanticBaseModel):
+class BaseResultsetColumn(PydanticBaseModel):
     """A column in a query response."""
 
-    kind: Literal["QueryResponseColumn"] = "QueryResponseColumn"
+    kind: Literal["BaseResultsetColumn"] = "BaseResultsetColumn"
     alias: str
     breakdown: str | None = None
     data: list[str | None] | list[float | None] | list[bool | None] | list[datetime | None]
 
 
-class QueryResponseDTO(PydanticBaseModel):
-    """A response to a query request."""
+class BaseResultset(PydanticBaseModel):
+    """Base for a resultset extended by QueryResponseDTO and (repository) Resultset."""
 
-    kind: Literal["QueryResponse"] = "QueryResponse"
     dataset: str
     version: int
     rows: int
-    columns: list[QueryResponseColumn]
+    columns: list[BaseResultsetColumn]
 
 
 T = TypeVar("T")
@@ -462,6 +316,3 @@ class FilterOptionCategory(BaseModel):
     kind: Literal["FilterOptionCategory"] = "FilterOptionCategory"
     values: list[FilterOptionValue[str]]
     parent_id: str | None = None
-
-
-FilterOptionsDTO = list[FilterOptionMinMax | FilterOptionCategory]
