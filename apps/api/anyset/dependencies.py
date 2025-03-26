@@ -89,7 +89,7 @@ async def get_repository(request: Request) -> RepositoryPort:
     )
 
     if dataset.adapter == RepositoryAdapter.PostgreSQL:
-        return PostgresRepository(settings=PostgresSettings(database=dataset.database_name))
+        return PostgresRepository(dataset=dataset)
     else:
         detail = f"UnsupportedRepositoryAdapter {dataset.adapter}"
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)

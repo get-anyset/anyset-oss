@@ -77,3 +77,10 @@ The host app will be available at http://localhost:3000
 - **Module Federation**: Sharing components between apps
 - **TypeScript**: Type safety for both React applications
 - **Development Servers**: Hot reloading for both front-end apps
+
+
+# TODOS:
+
+- Repository adapters must implement singleton pattern FOR EACH DATASET;
+- Breakdown implementation;
+- Filter values implementation;

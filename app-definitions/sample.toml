@@ -48,7 +48,7 @@ column_data_type = "String"
 
 [dataset_tables.cc_transactions.columns.merch_zipcode]
 name             = "merch_zipcode"
-column_type      = "Category"
+column_type      = "Other"
 column_data_type = "String"
 
 [dataset_tables.cc_transactions.columns.merchant_lat]
@@ -93,8 +93,9 @@ column_data_type = "String"
 
 [dataset_tables.cc_transactions.columns.city]
 name             = "city"
-column_type      = "Category"
+column_type      = "Other"
 column_data_type = "String"
+parent           = "state"
 
 [dataset_tables.cc_transactions.columns.state]
 name             = "state"
@@ -103,7 +104,7 @@ column_data_type = "String"
 
 [dataset_tables.cc_transactions.columns.zip]
 name             = "zip"
-column_type      = "Category"
+column_type      = "Other"
 column_data_type = "String"
 
 [dataset_tables.cc_transactions.columns.lat]

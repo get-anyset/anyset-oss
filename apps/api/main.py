@@ -1,11 +1,16 @@
 """FastAPI backend service for the microfrontend application."""
 
+import logging
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from anyset.controllers import router as anyset_router
 from anyset.settings import Settings, settings
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 
 def create_app(settings: Settings) -> FastAPI:

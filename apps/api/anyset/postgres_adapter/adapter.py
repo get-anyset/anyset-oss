@@ -9,11 +9,12 @@ from psycopg2.extras import RealDictCursor
 
 from ..models import (
     BaseResultsetColumn,
+    Dataset,
     FilterOptionCategory,
     FilterOptionMinMax,
+    FilterOptionValue,
     QueryRequestAggregation,
     QueryRequestCustomAggregation,
-    QueryRequestSelect,
 )
 from ..repository import FilterOptions, QueryRequest, RepositoryPort, Resultset
 from .settings import PostgresSettings, postgres_settings
@@ -24,35 +25,35 @@ logger = logging.getLogger(__name__)
 class PostgresRepository(RepositoryPort):
     """PostgreSQL implementation of RepositoryPort."""
 
-    def __init__(self, settings: PostgresSettings = postgres_settings):
+    _pool: Any = None
+
+    def __init__(self, dataset: Dataset):
         """Initialize the PostgreSQL repository.
 
         Args:
-            settings: PostgreSQL connection settings
+            dataset: Dataset - The dataset definition object
         """
-        self.settings = PostgresSettings(
-            **{**postgres_settings.model_dump(), **settings.model_dump()}
-        )
-        self._pool: Any = None
-        self._setup_connection_pool()
+        settings = {**postgres_settings.model_dump(), "database": dataset.database_name}
+        self._setup_connection_pool(PostgresSettings(**settings))
+        self.dataset = dataset
 
-    def _setup_connection_pool(self) -> None:
+    def _setup_connection_pool(self, settings: PostgresSettings) -> None:
         """Set up the connection pool for PostgreSQL."""
         try:
             self._pool = psycopg2.pool.SimpleConnectionPool(
-                minconn=self.settings.pool_min_size,
-                maxconn=self.settings.pool_max_size,
-                host=self.settings.host,
-                port=self.settings.port,
-                user=self.settings.user,
-                password=self.settings.password,
-                database=self.settings.database,
+                minconn=settings.pool_min_size,
+                maxconn=settings.pool_max_size,
+                host=settings.host,
+                port=settings.port,
+                user=settings.user,
+                password=settings.password,
+                database=settings.database,
             )
             logger.info(
                 "PostgreSQL connection pool established to %s:%s/%s",
-                self.settings.host,
-                self.settings.port,
-                self.settings.database,
+                settings.host,
+                settings.port,
+                settings.database,
             )
         except psycopg2.Error as ex:
             raise RuntimeError(f"FailedConnectPostgreSQLConnectionPool {ex}") from ex
@@ -74,9 +75,8 @@ class PostgresRepository(RepositoryPort):
             conn = self._pool.getconn()
 
             sql, params = self._build_sql_query(query)
-            print(query.group_by)
-            print(sql)
-            print(params)
+            logger.info(sql)
+            logger.info(params)
 
             with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                 cursor.execute(sql, params)
@@ -117,30 +117,79 @@ class PostgresRepository(RepositoryPort):
         if self._pool is None:
             raise RuntimeError("PostgreSQLConnectionPoolNotInitialized")
 
-        conn = None
-        filter_options: list[FilterOptionCategory | FilterOptionMinMax] = []
+        statements = []
+        for k, v in self.dataset.dataset_columns_category.items():
+            statements.extend(
+                [
+                    f"SELECT '{c}' AS n,  'category' AS k, ARRAY_AGG(DISTINCT {c}::varchar) AS v FROM {k}"
+                    for c in v
+                ]
+            )
+        for k, v in self.dataset.dataset_columns_fact.items():
+            statements.extend(
+                [
+                    f"SELECT '{c}' AS n,  'fact' AS k, ARRAY[CAST(MIN({c}) AS varchar), CAST(MAX({c}) AS varchar)] AS v FROM {k}"
+                    for c in v
+                ]
+            )
 
+        conn = None
         try:
             conn = self._pool.getconn()
 
-            with conn.cursor() as cursor:
-                # Get category columns filter options
-                category_options = self._get_category_filter_options(cursor)
-                filter_options.extend(category_options)
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute(" UNION ALL ".join(statements))
+                rows = cursor.fetchall()
 
-                # Get numeric (fact) columns filter options
-                numeric_options = self._get_numeric_filter_options(cursor)
-                filter_options.extend(numeric_options)
-
-            return filter_options
-
+                logger.info(rows)
         except psycopg2.Error as e:
-            logger.error("Error getting filter options: %s", e)
-            raise RuntimeError(f"Database error when getting filter options: {e}") from e
-
+            logger.error("Error executing PostgreSQL query: %s", e)
         finally:
             if conn is not None and self._pool is not None:
                 self._pool.putconn(conn)
+
+        return [
+            FilterOptionCategory(
+                name=v["n"],
+                kind="FilterOptionCategory",
+                values=[FilterOptionValue(label=i, value=i) for i in v["v"]],
+            )
+            if v["k"] == "category"
+            else FilterOptionMinMax(
+                name=v["n"],
+                kind="FilterOptionMinMax",
+                values=(
+                    FilterOptionValue(label=v["v"][0], value=float(v["v"][0])),
+                    FilterOptionValue(label=v["v"][1], value=float(v["v"][1])),
+                ),
+            )
+            for v in rows
+        ]
+
+        # conn = None
+        # filter_options: list[FilterOptionCategory | FilterOptionMinMax] = []
+
+        # try:
+        #     conn = self._pool.getconn()
+
+        #     with conn.cursor() as cursor:
+        #         # Get category columns filter options
+        #         category_options = self._get_category_filter_options(cursor)
+        #         filter_options.extend(category_options)
+
+        #         # Get numeric (fact) columns filter options
+        #         numeric_options = self._get_numeric_filter_options(cursor)
+        #         filter_options.extend(numeric_options)
+
+        #     return filter_options
+
+        # except psycopg2.Error as e:
+        #     logger.error("Error getting filter options: %s", e)
+        #     raise RuntimeError(f"Database error when getting filter options: {e}") from e
+
+        # finally:
+        #     if conn is not None and self._pool is not None:
+        #         self._pool.putconn(conn)
 
     def _build_sql_query(self, query: QueryRequest) -> tuple[str, dict[str, Any]]:
         """Build a SQL query from a QueryRequest.

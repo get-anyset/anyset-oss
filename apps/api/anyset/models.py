@@ -60,6 +60,7 @@ class DatasetTableColumn(BaseModel):
     kind: Literal["DatasetTableColumn"] = "DatasetTableColumn"
     column_type: ColumnType
     column_data_type: ColumnDataType
+    parent: str | None = None
 
 
 class DatasetTable(BaseModel):
@@ -94,7 +95,7 @@ class Dataset(BaseModel):
 
     @computed_field  # type: ignore
     @property
-    def _DatasetColumnsCategory(self) -> dict[str, list[str]]:
+    def dataset_columns_category(self) -> dict[str, list[str]]:
         """Dictionary of table names and their category columns."""
         return {
             t.name: self.list_columns_classified_as(t.columns, ColumnType.Category)
@@ -103,7 +104,7 @@ class Dataset(BaseModel):
 
     @computed_field  # type: ignore
     @property
-    def _DatasetColumnsDateTime(self) -> dict[str, list[str]]:
+    def dataset_columns_date_time(self) -> dict[str, list[str]]:
         """Dictionary of table names and their date-time columns."""
         return {
             t.name: self.list_columns_classified_as(t.columns, ColumnType.DateTime)
@@ -112,7 +113,7 @@ class Dataset(BaseModel):
 
     @computed_field  # type: ignore
     @property
-    def _DatasetColumnsFact(self) -> dict[str, list[str]]:
+    def dataset_columns_fact(self) -> dict[str, list[str]]:
         """Dictionary of table names and their fact columns."""
         return {
             t.name: self.list_columns_classified_as(t.columns, ColumnType.Fact)
@@ -121,7 +122,7 @@ class Dataset(BaseModel):
 
     @computed_field  # type: ignore
     @property
-    def _DatasetColumnsOther(self) -> dict[str, list[str]]:
+    def dataset_columns_other(self) -> dict[str, list[str]]:
         """Dictionary of table names and their other columns."""
         return {
             t.name: self.list_columns_classified_as(t.columns, ColumnType.Other)
@@ -144,7 +145,7 @@ class Dataset(BaseModel):
     ) -> bool:
         """Check if a column is classified as a given type."""
         try:
-            column_names = getattr(self, f"_DatasetColumns{column_type.value}")[table_name]
+            column_names = getattr(self, f"dataset_columns_{column_type.value}")[table_name]
         except KeyError as ex:
             raise ValueError(f"InvalidColumnType {column_type}") from ex
 
