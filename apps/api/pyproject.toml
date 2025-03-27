@@ -3,27 +3,12 @@ name            = "api"
 version         = "0.1.0"
 description     = "FastAPI backend for microfrontend application"
 authors         = []
-dependencies    = [
-    "fastapi==0.115.11",
-    "uvicorn==0.34.0",
-    "pydantic>=2.6.0",
-    "pydantic-settings>=2.1.0",
-    "python-slugify>=8.0.4",
-    "tomli>=2.2.1",
-    "orjson>=3.10.15",
-    "psycopg2-binary>=2.9.10",
-]
+dependencies    = ["fastapi==0.115.11", "uvicorn==0.34.0", "pydantic>=2.6.0", "pydantic-settings>=2.1.0", "python-slugify>=8.0.4", "tomli>=2.2.1", "orjson>=3.10.15", "psycopg2-binary>=2.9.10"]
 requires-python = ">=3.12"
-
-[project.optional-dependencies]
-dev = ["ruff>=0.3.0"]
-
-[tool.rye]
-managed          = true
-dev-dependencies = ["ruff>=0.3.0"]
 
 [tool.ruff]
 line-length    = 100
+fix            = true
 target-version = "py312"
 
 # Enable pycodestyle (E), Pyflakes (F), isort (I), and other recommended rules
@@ -43,9 +28,6 @@ ignore = [
     "D203", # one-blank-line-before-class
     "D212", # multi-line-summary-first-line
 ]
-
-fixable   = ["ALL"]
-unfixable = []
 
 exclude = [ # Files to exclude from Ruff
     ".bzr",
@@ -76,7 +58,11 @@ exclude = [ # Files to exclude from Ruff
 convention = "google"
 
 [tool.ruff.isort]
-known-first-party = ["anyset"]
+known-first-party          = ["anyset"]
+combine-as-imports         = true
+force-wrap-aliases         = true
+force-sort-within-sections = true
+section-order              = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 
 [tool.ruff.format]
 quote-style               = "double"
@@ -85,7 +71,13 @@ line-ending               = "auto"
 skip-magic-trailing-comma = false
 
 [dependency-groups]
-dev = [
-    "mypy>=1.15.0",
-    "types-psycopg2>=2.9.21.20250318",
-]
+dev = ["mypy>=1.15.0", "ruff>=0.3.0", "pytest>=8.0.0", "pytest-cov>=4.1.0", "pytest-asyncio>=0.23.5", "pytest-mock>=3.12.0", "types-psycopg2>=2.9.21.20250318"]
+
+[tool.pytest.ini_options]
+addopts = """ \
+--cov=anyset \
+--cov-branch \
+--cov-report=term-missing:skip-covered \
+--cov-fail-under=80 \
+test/
+"""

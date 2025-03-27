@@ -18,3 +18,6 @@ node_modules
 @mf-types/
 __pycache__/
 dist/
+
+# test coverage
+.coverage
