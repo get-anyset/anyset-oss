@@ -2,12 +2,12 @@
 
 import re
 
-import orjson
 from fastapi import HTTPException, Request, status
+import orjson
 from pydantic import ValidationError
 
 from .models import RepositoryAdapter
-from .postgres_adapter import PostgresRepository, PostgresSettings
+from .postgres_adapter import PostgresRepository
 from .repository import QueryRequest, RepositoryPort
 from .settings import settings
 
