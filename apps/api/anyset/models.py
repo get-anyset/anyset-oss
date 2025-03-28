@@ -4,8 +4,10 @@ from datetime import datetime
 from enum import Enum
 from typing import Generic, Literal, TypeVar
 
-from pydantic import BaseModel as PydanticBaseModel
-from pydantic import computed_field
+from pydantic import (
+    BaseModel as PydanticBaseModel,
+    computed_field,
+)
 from slugify import slugify
 
 
@@ -104,7 +106,7 @@ class Dataset(BaseModel):
 
     @computed_field  # type: ignore
     @property
-    def dataset_columns_date_time(self) -> dict[str, list[str]]:
+    def dataset_columns_datetime(self) -> dict[str, list[str]]:
         """Dictionary of table names and their date-time columns."""
         return {
             t.name: self.list_columns_classified_as(t.columns, ColumnType.DateTime)
@@ -145,11 +147,11 @@ class Dataset(BaseModel):
     ) -> bool:
         """Check if a column is classified as a given type."""
         try:
-            column_names = getattr(self, f"dataset_columns_{column_type.value}")[table_name]
-        except KeyError as ex:
+            attr_name = f"dataset_columns_{column_type.value.lower()}"
+            column_names = getattr(self, attr_name)[table_name]
+            return column_name in column_names
+        except (KeyError, AttributeError) as ex:
             raise ValueError(f"InvalidColumnType {column_type}") from ex
-
-        return column_name in column_names
 
 
 # class QueryRequestFilter(PydanticBaseModel):
