@@ -10,6 +10,7 @@ from anyset.models import (
     Dataset,
     DatasetTable,
     DatasetTableColumn,
+    QueryRequest,
     QueryRequestAggregation,
     QueryRequestCustomAggregation,
     QueryRequestFilterCategory,
@@ -18,7 +19,7 @@ from anyset.models import (
     QueryRequestPagination,
     QueryRequestSelect,
 )
-from anyset.repository import QueryRequest, RepositoryPort
+from anyset.repository_interface import IRepository
 
 
 @pytest.fixture
@@ -227,13 +228,13 @@ def test_query_request_validation(sample_dataset):
 
 
 def test_repository_port():
-    """Test RepositoryPort abstract class."""
-    # Test that RepositoryPort is abstract
+    """Test IRepository abstract class."""
+    # Test that IRepository is abstract
     with pytest.raises(TypeError):
-        RepositoryPort()
+        IRepository()
 
     # Test that abstract methods are not implemented
-    class ConcreteRepository(RepositoryPort):
+    class ConcreteRepository(IRepository):
         pass
 
     with pytest.raises(TypeError):
