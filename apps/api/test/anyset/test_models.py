@@ -7,6 +7,7 @@ from anyset.models import (
     BaseQueryRequest,
     BaseResultset,
     BaseResultsetColumn,
+    BuiltInRepositoryAdapter,
     ColumnDataType,
     ColumnType,
     Dataset,
@@ -21,7 +22,6 @@ from anyset.models import (
     QueryRequestOrderBy,
     QueryRequestPagination,
     QueryRequestSelect,
-    RepositoryAdapter,
 )
 
 
@@ -99,7 +99,7 @@ def test_dataset_column_classification():
         version=1,
         database_name="test_db",
         dataset_tables={"test_table": table},
-        adapter=RepositoryAdapter.InMemory,
+        adapter=BuiltInRepositoryAdapter.InMemory,
     )
 
     assert "category_col" in dataset.dataset_columns_category["test_table"]
