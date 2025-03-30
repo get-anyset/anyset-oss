@@ -6,9 +6,9 @@ from fastapi import HTTPException, Request, status
 import orjson
 from pydantic import ValidationError
 
-from .models import RepositoryAdapter
+from .models import BuiltInRepositoryAdapter, QueryRequest
 from .postgres_adapter import PostgresRepository
-from .repository import QueryRequest, RepositoryPort
+from .repository_interface import IRepository
 from .settings import settings
 
 
@@ -68,7 +68,7 @@ async def inject_dataset(request: Request) -> QueryRequest:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ex.errors()) from ex
 
 
-async def get_repository(request: Request) -> RepositoryPort:
+async def get_repository(request: Request) -> IRepository:
     """Resolve and return the repository implementation based on dataset configuration.
 
     Args:
@@ -88,7 +88,7 @@ async def get_repository(request: Request) -> RepositoryPort:
         ],
     )
 
-    if dataset.adapter == RepositoryAdapter.PostgreSQL:
+    if dataset.adapter == BuiltInRepositoryAdapter.PostgreSQL:
         return PostgresRepository(dataset=dataset)
     else:
         detail = f"UnsupportedRepositoryAdapter {dataset.adapter}"
