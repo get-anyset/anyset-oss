@@ -5,9 +5,15 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from fastapi.responses import ORJSONResponse
 
-from .dependencies import get_repository, inject_dataset
-from .models import BaseQueryRequest, BaseResultset, FilterOptionCategory, FilterOptionMinMax
-from .repository import QueryRequest, RepositoryPort
+from ..dependencies import get_repository, inject_dataset
+from ..models import (
+    BaseQueryRequest,
+    BaseResultset,
+    FilterOptionCategory,
+    FilterOptionMinMax,
+    QueryRequest,
+)
+from ..repository_interface import IRepository
 
 router = APIRouter(prefix="/api")
 
@@ -35,7 +41,7 @@ async def execute_query(
     version: int,
     body: QueryRequestDTO,
     query: Annotated[QueryRequest, Depends(inject_dataset)],
-    repository: Annotated[RepositoryPort, Depends(get_repository)],
+    repository: Annotated[IRepository, Depends(get_repository)],
 ) -> QueryResponseDTO:
     """Execute query on a dataset.
 
@@ -66,7 +72,7 @@ FilterOptionsDTO = list[FilterOptionMinMax | FilterOptionCategory]
 async def get_filter_options(
     path_prefix: str,
     version: int,
-    repository: Annotated[RepositoryPort, Depends(get_repository)],
+    repository: Annotated[IRepository, Depends(get_repository)],
 ) -> FilterOptionsDTO:
     """Get the filter options for a dataset to populate filter components in the UI.
 
