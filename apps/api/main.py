@@ -2,11 +2,11 @@
 
 import logging
 
-import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
 
-from anyset.controllers import router as anyset_router
+from anyset.api import router as anyset_router
 from anyset.settings import Settings, settings
 
 # Configure logging

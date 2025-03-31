@@ -4,26 +4,29 @@ import logging
 from typing import Any
 
 import psycopg2
-import psycopg2.pool
 from psycopg2.extras import RealDictCursor
+import psycopg2.pool
 
 from ..models import (
     BaseResultsetColumn,
     Dataset,
     FilterOptionCategory,
     FilterOptionMinMax,
+    FilterOptions,
     FilterOptionValue,
+    QueryRequest,
     QueryRequestAggregation,
     QueryRequestCustomAggregation,
+    Resultset,
 )
-from ..repository import FilterOptions, QueryRequest, RepositoryPort, Resultset
+from ..repository_interface import IRepository
 from .settings import PostgresSettings, postgres_settings
 
 logger = logging.getLogger(__name__)
 
 
-class PostgresRepository(RepositoryPort):
-    """PostgreSQL implementation of RepositoryPort."""
+class PostgresRepository(IRepository):
+    """PostgreSQL implementation of IRepository."""
 
     _pool: Any = None
 
