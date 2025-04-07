@@ -74,7 +74,7 @@ class DatasetTable(BaseModel):
     columns: dict[str, DatasetTableColumn]
 
 
-class BuiltInRepositoryAdapter(str, Enum):
+class RepositoryOption(str, Enum):
     """The repository adapter options."""
 
     InMemory = "InMemory"
@@ -94,7 +94,7 @@ class Dataset(BaseModel):
     dataset_tables: dict[str, DatasetTable]
     custom_aggregation_functions: dict[str, str] | None = None
 
-    adapter: BuiltInRepositoryAdapter
+    adapter: RepositoryOption
     # custom_adapter_path: str | None = None
 
     @computed_field  # type: ignore
