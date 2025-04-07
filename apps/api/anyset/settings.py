@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
-import tomli
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import tomli
 
 from .models import Dataset
 
