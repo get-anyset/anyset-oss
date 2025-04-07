@@ -25,7 +25,7 @@ from .settings import PostgresSettings, postgres_settings
 logger = logging.getLogger(__name__)
 
 
-class PostgresRepository(IRepository):
+class PostgresAdapter(IRepository):
     """PostgreSQL implementation of IRepository."""
 
     _pool: Any = None
