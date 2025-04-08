@@ -90,12 +90,13 @@ class Dataset(BaseModel):
     path_prefix: str
     version: int
 
-    database_name: str
-    dataset_tables: dict[str, DatasetTable]
-    custom_aggregation_functions: dict[str, str] | None = None
-
     adapter: RepositoryOption
-    # custom_adapter_path: str | None = None
+    adapter_config: dict[str, str | int | float | bool] = {}
+    # custom_adapter_path: str | None = None # TODO: Add this functionality
+
+    dataset_tables: dict[str, DatasetTable]
+
+    custom_aggregation_functions: dict[str, str] | None = None
 
     @computed_field  # type: ignore
     @property
