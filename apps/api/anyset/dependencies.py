@@ -1,5 +1,6 @@
 """Dependencies for the AnySet API."""
 
+from logging import getLogger
 import re
 
 from fastapi import HTTPException, Request, status
@@ -10,6 +11,8 @@ from .models import QueryRequest, RepositoryOption
 from .postgres_adapter import PostgresAdapter
 from .repository_interface import IRepository
 from .settings import settings
+
+logger = getLogger(__name__)
 
 
 def get_dataset(path: str, masks: list[str]):
@@ -68,6 +71,16 @@ async def inject_dataset(request: Request) -> QueryRequest:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ex.errors()) from ex
 
 
+def init_repositories():
+    """Initialize repositories for each dataset."""
+    for d in settings.application_definitions.values():
+        if d.adapter == RepositoryOption.PostgreSQL:
+            PostgresAdapter(dataset=d)
+        else:
+            detail = f"UnsupportedRepositoryAdapter {d.adapter}"
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+
+
 async def get_repository(request: Request) -> IRepository:
     """Resolve and return the repository implementation based on dataset configuration.
 
@@ -75,7 +88,7 @@ async def get_repository(request: Request) -> IRepository:
         request: Request - The FastAPI request object
 
     Returns:
-        RepositoryPort - The repository implementation configured for the dataset
+        IRepository - The repository implementation configured for the dataset
 
     Raises:
         HTTPException - When dataset definition not found or adapter not supported
