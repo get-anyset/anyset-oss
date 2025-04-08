@@ -6,7 +6,12 @@ version     = 1
 
 adapter = "PostgreSQL"
 
-database_name = "mydatabase"
+[adapter_config]
+host     = "localhost"
+port     = 5432
+user     = "myuser"
+password = "mypassword"
+database = "mydatabase"
 
 [custom_aggregation_functions]
 # SUM_OF_TRANSACTION_AMOUNT = """
