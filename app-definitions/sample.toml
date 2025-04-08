@@ -9,9 +9,9 @@ adapter = "PostgreSQL"
 [adapter_config]
 host     = "localhost"
 port     = 5432
-user     = "myuser"
-password = "mypassword"
 database = "mydatabase"
+user     = "myuser"
+password = "$env!PG_SAMPLE_DATASET_PASSWORD"
 
 [custom_aggregation_functions]
 # SUM_OF_TRANSACTION_AMOUNT = """

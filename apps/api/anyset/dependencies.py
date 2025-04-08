@@ -1,6 +1,7 @@
 """Dependencies for the AnySet API."""
 
 from logging import getLogger
+import os
 import re
 
 from fastapi import HTTPException, Request, status
@@ -74,6 +75,10 @@ async def inject_dataset(request: Request) -> QueryRequest:
 def init_repositories():
     """Initialize repositories for each dataset."""
     for d in settings.application_definitions.values():
+        d.adapter_config = {
+            k: os.getenv(v.replace("$env!", "")) if isinstance(v, str) and "$env!" in v else v
+            for k, v in d.adapter_config.items()
+        }
         if d.adapter == RepositoryOption.PostgreSQL:
             PostgresAdapter(dataset=d)
         else:
