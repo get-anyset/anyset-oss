@@ -10,6 +10,10 @@ yarn-error.log
 # In that case, don't forget to run `yarn config set enableGlobalCache false`!
 # Documentation here: https://yarnpkg.com/features/caching#zero-installs
 
+# env files
+.env*
+!.env.example
+
 #!.yarn/cache
 .pnp.*
 node_modules

@@ -1,6 +1,6 @@
 """PostgreSQL implementation of the RepositoryPort."""
 
-from .adapter import PostgresRepository
+from .adapter import PostgresAdapter
 from .settings import PostgresSettings
 
-__all__ = ["PostgresRepository", "PostgresSettings"]
+__all__ = ["PostgresAdapter", "PostgresSettings"]

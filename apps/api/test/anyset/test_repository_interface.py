@@ -1,15 +1,21 @@
 """Tests for the AnySet repository module."""
 
+from unittest.mock import AsyncMock
+
 from fastapi import HTTPException, status
 import pytest
 
 from anyset.models import (
-    BuiltInRepositoryAdapter,
+    BaseResultsetColumn,
     ColumnDataType,
     ColumnType,
     Dataset,
     DatasetTable,
     DatasetTableColumn,
+    FilterOptionCategory,
+    FilterOptionMinMax,
+    FilterOptions,
+    FilterOptionValue,
     QueryRequest,
     QueryRequestAggregation,
     QueryRequestCustomAggregation,
@@ -18,6 +24,8 @@ from anyset.models import (
     QueryRequestOrderBy,
     QueryRequestPagination,
     QueryRequestSelect,
+    RepositoryOption,
+    Resultset,
 )
 from anyset.repository_interface import IRepository
 
@@ -56,9 +64,103 @@ def sample_dataset():
         version=1,
         database_name="test_db",
         dataset_tables={"test_table": table},
-        adapter=BuiltInRepositoryAdapter.InMemory,
+        adapter=RepositoryOption.InMemory,
         custom_aggregation_functions={"custom_sum": "SUM"},
     )
+
+
+@pytest.fixture
+def sample_query_request(sample_dataset):
+    """Create a sample query request for testing."""
+    return QueryRequest(
+        table_name="test_table",
+        dataset=sample_dataset,
+        filters=[
+            QueryRequestFilterCategory(
+                column_name="category_col",
+                values=["value1", "value2"],
+            ),
+            QueryRequestFilterFact(
+                column_name="fact_col",
+                values=(0.0, 100.0),
+            ),
+        ],
+        select=[
+            QueryRequestSelect(
+                column_name="category_col",
+                alias="category",
+            ),
+            QueryRequestSelect(
+                column_name="fact_col",
+                alias="fact",
+            ),
+        ],
+        aggregations=[
+            QueryRequestAggregation(
+                column_name="fact_col",
+                aggregation_function="COUNT",
+                alias="count",
+            ),
+        ],
+        order_by=[
+            QueryRequestOrderBy(
+                column_name="category_col",
+                direction="ASC",
+            ),
+        ],
+        pagination=QueryRequestPagination(
+            limit=10,
+            offset=0,
+        ),
+    )
+
+
+@pytest.fixture
+def sample_resultset(sample_dataset):
+    """Create a sample resultset for testing."""
+    return Resultset(
+        dataset=sample_dataset._id,
+        version=sample_dataset.version,
+        rows=2,
+        columns=[
+            BaseResultsetColumn(
+                alias="category",
+                breakdown=None,
+                data=["value1", "value2"],
+            ),
+            BaseResultsetColumn(
+                alias="fact",
+                breakdown=None,
+                data=[10.5, 20.7],
+            ),
+            BaseResultsetColumn(
+                alias="count",
+                breakdown=None,
+                data=[5, 8],
+            ),
+        ],
+    )
+
+
+@pytest.fixture
+def sample_filter_options():
+    """Create sample filter options for testing."""
+    return [
+        FilterOptionCategory(
+            name="category_col",
+            values=[
+                FilterOptionValue(label="Value 1", value="value1"),
+                FilterOptionValue(label="Value 2", value="value2"),
+            ],
+        ),
+        FilterOptionMinMax(
+            name="fact_col",
+            values=(
+                FilterOptionValue(label="Min", value=0.0),
+                FilterOptionValue(label="Max", value=100.0),
+            ),
+        ),
+    ]
 
 
 def test_query_request_validation(sample_dataset):
@@ -229,13 +331,170 @@ def test_query_request_validation(sample_dataset):
 
 def test_repository_port():
     """Test IRepository abstract class."""
-    # Test that IRepository is abstract
-    with pytest.raises(TypeError):
-        IRepository()
+    # Test that IRepository is abstract and can't be instantiated directly
 
-    # Test that abstract methods are not implemented
+    # Verify that IRepository has abstract methods by checking decorators
+
+    # Check that execute_query is an abstract method
+    assert hasattr(
+        IRepository,
+        "execute_query",
+    ), "IRepository should have method execute_query "
+    method = IRepository.execute_query
+    assert getattr(
+        method,
+        "__isabstractmethod__",
+        False,
+    ), "execute_query method should be abstract"
+
+    # Check that get_filter_options is an abstract method
+    assert hasattr(
+        IRepository,
+        "get_filter_options",
+    ), "IRepository should have method get_filter_options"
+    method = IRepository.get_filter_options
+    assert getattr(
+        method,
+        "__isabstractmethod__",
+        False,
+    ), "get_filter_options method should be abstract"
+
+
+class MockRepository(IRepository):
+    """Mock implementation of IRepository for testing."""
+
+    def __init__(self):
+        """Initialize the mock repository."""
+        self.execute_query_mock = AsyncMock()
+        self.get_filter_options_mock = AsyncMock()
+
+    async def execute_query(self, query: QueryRequest) -> Resultset:
+        """Mock execute_query method."""
+        return await self.execute_query_mock(query)
+
+    async def get_filter_options(self) -> FilterOptions:
+        """Mock get_filter_options method."""
+        return await self.get_filter_options_mock()
+
+
+@pytest.mark.asyncio
+async def test_execute_query(sample_query_request, sample_resultset):
+    """Test execute_query method."""
+    # Setup
+    repo = MockRepository()
+    repo.execute_query_mock.return_value = sample_resultset
+
+    # Execute
+    result = await repo.execute_query(sample_query_request)
+
+    # Verify
+    repo.execute_query_mock.assert_called_once_with(sample_query_request)
+    assert result == sample_resultset
+    assert result.rows == 2
+    assert len(result.columns) == 3
+    assert result.columns[0].alias == "category"
+    assert result.columns[1].alias == "fact"
+    assert result.columns[2].alias == "count"
+
+
+@pytest.mark.asyncio
+async def test_get_filter_options(sample_filter_options):
+    """Test get_filter_options method."""
+    # Setup
+    repo = MockRepository()
+    repo.get_filter_options_mock.return_value = sample_filter_options
+
+    # Execute
+    result = await repo.get_filter_options()
+
+    # Verify
+    repo.get_filter_options_mock.assert_called_once()
+    assert result == sample_filter_options
+    assert len(result) == 2
+
+    # Check first filter option (category type)
+    assert result[0].kind == "FilterOptionCategory"
+    assert len(result[0].values) == 2
+    assert result[0].values[0].label == "Value 1"
+    assert result[0].values[0].value == "value1"
+
+    # Check second filter option (min/max type)
+    assert result[1].kind == "FilterOptionMinMax"
+    assert result[1].values[0].label == "Min"
+    assert result[1].values[0].value == 0.0
+    assert result[1].values[1].label == "Max"
+    assert result[1].values[1].value == 100.0
+
+
+@pytest.mark.parametrize(
+    "exception,expected_error",
+    [
+        (RuntimeError("Database error"), "Database error"),
+        (ConnectionError("Connection failed"), "Connection failed"),
+        (ValueError("Invalid value"), "Invalid value"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_execute_query_exception_handling(sample_query_request, exception, expected_error):
+    """Test execute_query method exception handling."""
+    # Setup
+    repo = MockRepository()
+    repo.execute_query_mock.side_effect = exception
+
+    # Execute and verify
+    with pytest.raises(type(exception)) as exc_info:
+        await repo.execute_query(sample_query_request)
+
+    assert str(exc_info.value) == expected_error
+    repo.execute_query_mock.assert_called_once_with(sample_query_request)
+
+
+@pytest.mark.parametrize(
+    "exception,expected_error",
+    [
+        (RuntimeError("Database error"), "Database error"),
+        (ConnectionError("Connection failed"), "Connection failed"),
+        (ValueError("Invalid value"), "Invalid value"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_get_filter_options_exception_handling(exception, expected_error):
+    """Test get_filter_options method exception handling."""
+    # Setup
+    repo = MockRepository()
+    repo.get_filter_options_mock.side_effect = exception
+
+    # Execute and verify
+    with pytest.raises(type(exception)) as exc_info:
+        await repo.get_filter_options()
+
+    assert str(exc_info.value) == expected_error
+    repo.get_filter_options_mock.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_abstract_execute_query_raises_not_implemented():
+    """Test that IRepository.execute_query raises NotImplementedError when not implemented."""
+
     class ConcreteRepository(IRepository):
-        pass
+        async def get_filter_options(self):
+            pass  # implement one method but not execute_query
 
-    with pytest.raises(TypeError):
-        ConcreteRepository()
+    repo = ConcreteRepository()
+    with pytest.raises(NotImplementedError) as exc_info:
+        await repo.execute_query(None)
+    assert "MethodNotImplementedBySubClass execute_query" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_abstract_get_filter_options_raises_not_implemented():
+    """Test that IRepository.get_filter_options raises NotImplementedError when not implemented."""
+
+    class ConcreteRepository(IRepository):
+        async def execute_query(self, query):
+            pass  # implement one method but not get_filter_options
+
+    repo = ConcreteRepository()
+    with pytest.raises(NotImplementedError) as exc_info:
+        await repo.get_filter_options()
+    assert "MethodNotImplementedBySubClass get_filter_options" in str(exc_info.value)

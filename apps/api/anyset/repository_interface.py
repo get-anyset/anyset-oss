@@ -1,11 +1,11 @@
 """Interface definitions for the AnySet API based on ports and adapters architecture."""
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
 from .models import FilterOptions, QueryRequest, Resultset
 
 
-class IRepository(ABC):
+class IRepository:
     """Abstract base class defining the repository interface.
 
     This port is used to execute queries and retrieve filter options.

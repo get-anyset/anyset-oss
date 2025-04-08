@@ -1,4 +1,4 @@
-"""Controllers for the AnySet API."""
+"""Routes for the AnySet API."""
 
 from typing import Annotated
 

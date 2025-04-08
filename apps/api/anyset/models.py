@@ -74,7 +74,7 @@ class DatasetTable(BaseModel):
     columns: dict[str, DatasetTableColumn]
 
 
-class BuiltInRepositoryAdapter(str, Enum):
+class RepositoryOption(str, Enum):
     """The repository adapter options."""
 
     InMemory = "InMemory"
@@ -90,12 +90,13 @@ class Dataset(BaseModel):
     path_prefix: str
     version: int
 
-    database_name: str
-    dataset_tables: dict[str, DatasetTable]
-    custom_aggregation_functions: dict[str, str] | None = None
+    adapter: RepositoryOption
+    adapter_config: dict[str, str | int | float | bool] = {}
+    # custom_adapter_path: str | None = None # TODO: Add this functionality
 
-    adapter: BuiltInRepositoryAdapter
-    # custom_adapter_path: str | None = None
+    dataset_tables: dict[str, DatasetTable]
+
+    custom_aggregation_functions: dict[str, str] | None = None
 
     @computed_field  # type: ignore
     @property

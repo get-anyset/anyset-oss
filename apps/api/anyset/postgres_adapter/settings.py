@@ -18,9 +18,9 @@ class PostgresSettings(BaseSettings):
         extra="ignore",
     )
 
-    host: str = "localhost"
+    host: str = ""
     port: int = 5432
-    user: str = "postgres"
+    user: str = ""
     password: str = ""
     database: str = ""
 

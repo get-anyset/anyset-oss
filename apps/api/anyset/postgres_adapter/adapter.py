@@ -20,12 +20,13 @@ from ..models import (
     Resultset,
 )
 from ..repository_interface import IRepository
+from ..singleton_meta import SingletonMeta
 from .settings import PostgresSettings, postgres_settings
 
 logger = logging.getLogger(__name__)
 
 
-class PostgresRepository(IRepository):
+class PostgresAdapter(IRepository, metaclass=SingletonMeta):
     """PostgreSQL implementation of IRepository."""
 
     _pool: Any = None
@@ -36,7 +37,7 @@ class PostgresRepository(IRepository):
         Args:
             dataset: Dataset - The dataset definition object
         """
-        settings = {**postgres_settings.model_dump(), "database": dataset.database_name}
+        settings = {**postgres_settings.model_dump(), **dataset.adapter_config}
         self._setup_connection_pool(PostgresSettings(**settings))
         self.dataset = dataset
 

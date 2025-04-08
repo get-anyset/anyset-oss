@@ -2,11 +2,14 @@
 
 from pathlib import Path
 
-import tomli
-from pydantic import Field, computed_field
+from dotenv import load_dotenv
+from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import tomli
 
 from .models import Dataset
+
+load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -26,7 +29,8 @@ class Settings(BaseSettings):
 
     host: str = "0.0.0.0"
     port: int = 8000
-    debug: bool = Field(default=True, description="Enable debug mode")
+    debug: bool = True
+    log_level: str = "INFO"
 
     cors_allow_credentials: bool = True
     cors_allow_headers: list[str] = ["*"]
