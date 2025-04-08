@@ -3,7 +3,7 @@ name            = "api"
 version         = "0.1.0"
 description     = "FastAPI backend for microfrontend application"
 authors         = []
-dependencies    = ["fastapi==0.115.11", "uvicorn==0.34.0", "pydantic>=2.6.0", "pydantic-settings>=2.1.0", "python-slugify>=8.0.4", "tomli>=2.2.1", "orjson>=3.10.15", "psycopg2-binary>=2.9.10", "snowflake-connector-python>=3.14.0"]
+dependencies    = ["fastapi==0.115.11", "orjson>=3.10.15", "psycopg2-binary>=2.9.10", "pydantic-settings>=2.1.0", "pydantic>=2.6.0", "python-dotenv>=1.0.1", "python-slugify>=8.0.4", "snowflake-connector-python>=3.14.0", "tomli>=2.2.1", "uvicorn==0.34.0"]
 requires-python = ">=3.12"
 
 [tool.ruff]
