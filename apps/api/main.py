@@ -7,10 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from anyset.api import router as anyset_router
+from anyset.dependencies import init_repositories
 from anyset.settings import Settings, settings
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=settings.log_level)
 
 
 def create_app(settings: Settings) -> FastAPI:
@@ -22,6 +22,8 @@ def create_app(settings: Settings) -> FastAPI:
     Returns:
         Configured FastAPI application
     """
+    init_repositories()
+
     app = FastAPI(
         # title=settings.title,
         # description=settings.description,
