@@ -12,6 +12,7 @@ from .models import QueryRequest, RepositoryOption
 from .postgres_adapter import PostgresAdapter
 from .repository_interface import IRepository
 from .settings import settings
+from .snowflake_adapter import SnowflakeAdapter
 
 logger = getLogger(__name__)
 
@@ -79,11 +80,12 @@ def init_repositories():
             k: os.getenv(v.replace("$env!", "")) if isinstance(v, str) and "$env!" in v else v
             for k, v in d.adapter_config.items()
         }
-        if d.adapter == RepositoryOption.PostgreSQL:
+        if d.adapter == RepositoryOption.postgresql:
             PostgresAdapter(dataset=d)
+        elif d.adapter == RepositoryOption.snowflake:
+            SnowflakeAdapter(dataset=d)
         else:
-            detail = f"UnsupportedRepositoryAdapter {d.adapter}"
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+            raise ValueError(f"UnsupportedRepositoryAdapter {d.adapter}")
 
 
 async def get_repository(request: Request) -> IRepository:
@@ -106,8 +108,10 @@ async def get_repository(request: Request) -> IRepository:
         ],
     )
 
-    if dataset.adapter == RepositoryOption.PostgreSQL:
+    if dataset.adapter == RepositoryOption.postgresql:
         return PostgresAdapter(dataset=dataset)
+    elif dataset.adapter == RepositoryOption.snowflake:
+        return SnowflakeAdapter(dataset=dataset)
     else:
         detail = f"UnsupportedRepositoryAdapter {dataset.adapter}"
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
