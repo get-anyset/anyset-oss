@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Generic, Literal, TypeVar
+from typing import Literal
 
 from fastapi import HTTPException, status
 from pydantic import (
@@ -11,6 +11,26 @@ from pydantic import (
     model_validator,
 )
 from slugify import slugify
+
+
+class ColumnType(str, Enum):
+    """The class of a column."""
+
+    boolean = "boolean"
+    datetime = "datetime"
+    numeric_fact = "numeric_fact"
+    numeric_other = "numeric_other"
+    text_category = "text_category"
+    text_other = "text_other"
+
+
+class RepositoryOption(str, Enum):
+    """The repository adapter options."""
+
+    in_memory = "in_memory"
+    postgresql = "postgresql"
+    snowflake = "snowflake"
+    custom = "custom"
 
 
 class BaseModel(PydanticBaseModel):
@@ -26,45 +46,12 @@ class BaseModel(PydanticBaseModel):
         """The ID of the model."""
         return slugify(f"{self.kind} {self.name}")
 
-    # model_config = {
-    #     "json_schema_extra": {
-    #         "examples": [
-    #             {
-    #                 "kind": "Application",
-    #                 "Id": "app-123",
-    #                 "Name": "Sample App",
-    #                 "description": "A sample application",
-    #             }
-    #         ]
-    #     }
-    # }
-
-
-class ColumnType(str, Enum):
-    """The class of a column."""
-
-    Category = "Category"
-    DateTime = "DateTime"
-    Fact = "Fact"
-    Other = "Other"
-
-
-class ColumnDataType(str, Enum):
-    """The data type of a column."""
-
-    String = "String"
-    Number = "Number"
-    Boolean = "Boolean"
-    DateTime = "DateTime"
-
 
 class DatasetTableColumn(BaseModel):
     """A column in a table."""
 
     kind: Literal["DatasetTableColumn"] = "DatasetTableColumn"
     column_type: ColumnType
-    column_data_type: ColumnDataType
-    parent: str | None = None
 
 
 class DatasetTable(BaseModel):
@@ -72,15 +59,6 @@ class DatasetTable(BaseModel):
 
     kind: Literal["DatasetTable"] = "DatasetTable"
     columns: dict[str, DatasetTableColumn]
-
-
-class RepositoryOption(str, Enum):
-    """The repository adapter options."""
-
-    InMemory = "InMemory"
-    PostgreSQL = "PostgreSQL"
-    Snowflake = "Snowflake"
-    Custom = "Custom"
 
 
 class Dataset(BaseModel):
@@ -96,41 +74,61 @@ class Dataset(BaseModel):
 
     dataset_tables: dict[str, DatasetTable]
 
+    category_hierarchies: dict[str, list[tuple[str, str]]]
+
     custom_aggregation_functions: dict[str, str] | None = None
 
     @computed_field  # type: ignore
     @property
-    def dataset_columns_category(self) -> dict[str, list[str]]:
-        """Dictionary of table names and their category columns."""
+    def dataset_cols_boolean(self) -> dict[str, list[str]]:
+        """Dictionary of table names and their boolean columns."""
         return {
-            t.name: self.list_columns_classified_as(t.columns, ColumnType.Category)
+            t.name: self.list_columns_classified_as(t.columns, ColumnType.boolean)
             for t in self.dataset_tables.values()
         }
 
     @computed_field  # type: ignore
     @property
-    def dataset_columns_datetime(self) -> dict[str, list[str]]:
-        """Dictionary of table names and their date-time columns."""
+    def dataset_cols_datetime(self) -> dict[str, list[str]]:
+        """Dictionary of table names and their datetime columns."""
         return {
-            t.name: self.list_columns_classified_as(t.columns, ColumnType.DateTime)
+            t.name: self.list_columns_classified_as(t.columns, ColumnType.datetime)
             for t in self.dataset_tables.values()
         }
 
     @computed_field  # type: ignore
     @property
-    def dataset_columns_fact(self) -> dict[str, list[str]]:
+    def dataset_cols_numeric_fact(self) -> dict[str, list[str]]:
         """Dictionary of table names and their fact columns."""
         return {
-            t.name: self.list_columns_classified_as(t.columns, ColumnType.Fact)
+            t.name: self.list_columns_classified_as(t.columns, ColumnType.numeric_fact)
             for t in self.dataset_tables.values()
         }
 
     @computed_field  # type: ignore
     @property
-    def dataset_columns_other(self) -> dict[str, list[str]]:
-        """Dictionary of table names and their other columns."""
+    def dataset_cols_numeric_other(self) -> dict[str, list[str]]:
+        """Dictionary of table names and their other numeric columns."""
         return {
-            t.name: self.list_columns_classified_as(t.columns, ColumnType.Other)
+            t.name: self.list_columns_classified_as(t.columns, ColumnType.numeric_other)
+            for t in self.dataset_tables.values()
+        }
+
+    @computed_field  # type: ignore
+    @property
+    def dataset_cols_text_category(self) -> dict[str, list[str]]:
+        """Dictionary of table names and their category columns."""
+        return {
+            t.name: self.list_columns_classified_as(t.columns, ColumnType.text_category)
+            for t in self.dataset_tables.values()
+        }
+
+    @computed_field  # type: ignore
+    @property
+    def dataset_cols_text_other(self) -> dict[str, list[str]]:
+        """Dictionary of table names and their other text columns."""
+        return {
+            t.name: self.list_columns_classified_as(t.columns, ColumnType.text_other)
             for t in self.dataset_tables.values()
         }
 
@@ -313,7 +311,7 @@ class QueryRequest(BaseQueryRequest):
         for filter in self.filters:
             is_category = self.dataset.is_column_classified_as(
                 filter.column_name,
-                ColumnType.Category,
+                ColumnType.text_category,
                 self.table_name,
             )
             if filter.kind == "QueryRequestFilterCategory" and not is_category:
@@ -323,7 +321,7 @@ class QueryRequest(BaseQueryRequest):
                 )
             is_fact = self.dataset.is_column_classified_as(
                 filter.column_name,
-                ColumnType.Fact,
+                ColumnType.numeric_fact,
                 self.table_name,
             )
             if filter.kind == "QueryRequestFilterFact" and not is_fact:
@@ -362,7 +360,7 @@ class QueryRequest(BaseQueryRequest):
 
             if agg.kind == "QueryRequestAggregation" and not self.dataset.is_column_classified_as(
                 column_name=agg.column_name,
-                column_type=ColumnType.Fact,
+                column_type=ColumnType.numeric_fact,
                 table_name=self.table_name,
             ):
                 raise HTTPException(
@@ -396,37 +394,27 @@ class Resultset(BaseResultset):
     kind: Literal["Resultset"] = "Resultset"
 
 
-T = TypeVar("T")
-
-
-class FilterOptionValue(PydanticBaseModel, Generic[T]):
-    """A filter option."""
-
-    label: str
-    value: T
-
-
-class FilterOptionMinMax(BaseModel):
+class MinMaxFilterOption(BaseModel):
     """Filter options from a column classified as Fact.
 
     Fact columns data types are always numeric.
     The filter options will be the minimum and maximum values of the column.
     """
 
-    kind: Literal["FilterOptionMinMax"] = "FilterOptionMinMax"
-    values: tuple[FilterOptionValue[float], FilterOptionValue[float]]
+    kind: Literal["MinMaxFilterOption"] = "MinMaxFilterOption"
+    values: tuple[datetime, datetime] | tuple[float, float]
 
 
-class FilterOptionCategory(BaseModel):
-    """Filter options from a column classified as Category.
+class CategoricalFilterOption(BaseModel):
+    """Filter options from a column classified as Boolean.
 
-    Category columns data types are always strings.
+    Boolean category columns data types are always strings.
     The filter options will be the unique values of the column.
     """
 
-    kind: Literal["FilterOptionCategory"] = "FilterOptionCategory"
-    values: list[FilterOptionValue[str]]
-    parent_id: str | None = None
+    kind: Literal["CategoricalFilterOption"] = "CategoricalFilterOption"
+    values: list[bool] | list[str]
+    children: list["CategoricalFilterOption"] | None = None
 
 
-FilterOptions = list[FilterOptionMinMax | FilterOptionCategory]
+FilterOptions = list[MinMaxFilterOption | CategoricalFilterOption]
