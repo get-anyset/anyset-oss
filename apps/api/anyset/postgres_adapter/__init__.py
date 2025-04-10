@@ -1,4 +1,4 @@
-"""PostgreSQL implementation of the RepositoryPort."""
+"""PostgreSQL implementation of RepositoryPort."""
 
 from .adapter import PostgresAdapter
 from .settings import PostgresSettings

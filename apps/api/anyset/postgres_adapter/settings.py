@@ -13,8 +13,6 @@ class PostgresSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="PG_",
         case_sensitive=False,
-        env_file=".env",
-        env_file_encoding="utf-8",
         extra="ignore",
     )
 

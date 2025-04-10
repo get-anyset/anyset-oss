@@ -9,11 +9,10 @@ import psycopg2.pool
 
 from ..models import (
     BaseResultsetColumn,
+    CategoricalFilterOption,
     Dataset,
-    FilterOptionCategory,
-    FilterOptionMinMax,
     FilterOptions,
-    FilterOptionValue,
+    MinMaxFilterOption,
     QueryRequest,
     QueryRequestAggregation,
     QueryRequestCustomAggregation,
@@ -122,14 +121,14 @@ class PostgresAdapter(IRepository, metaclass=SingletonMeta):
             raise RuntimeError("PostgreSQLConnectionPoolNotInitialized")
 
         statements = []
-        for k, v in self.dataset.dataset_columns_category.items():
+        for k, v in self.dataset.dataset_cols_text_category.items():
             statements.extend(
                 [
                     f"SELECT '{c}' AS n,  'category' AS k, ARRAY_AGG(DISTINCT {c}::varchar) AS v FROM {k}"
                     for c in v
                 ]
             )
-        for k, v in self.dataset.dataset_columns_fact.items():
+        for k, v in self.dataset.dataset_cols_numeric_fact.items():
             statements.extend(
                 [
                     f"SELECT '{c}' AS n,  'fact' AS k, ARRAY[CAST(MIN({c}) AS varchar), CAST(MAX({c}) AS varchar)] AS v FROM {k}"
@@ -145,7 +144,6 @@ class PostgresAdapter(IRepository, metaclass=SingletonMeta):
                 cursor.execute(" UNION ALL ".join(statements))
                 rows = cursor.fetchall()
 
-                logger.info(rows)
         except psycopg2.Error as e:
             logger.error("Error executing PostgreSQL query: %s", e)
         finally:
@@ -153,47 +151,19 @@ class PostgresAdapter(IRepository, metaclass=SingletonMeta):
                 self._pool.putconn(conn)
 
         return [
-            FilterOptionCategory(
+            CategoricalFilterOption(
                 name=v["n"],
-                kind="FilterOptionCategory",
-                values=[FilterOptionValue(label=i, value=i) for i in v["v"]],
+                kind="CategoricalFilterOption",
+                values=v["v"],
             )
             if v["k"] == "category"
-            else FilterOptionMinMax(
+            else MinMaxFilterOption(
                 name=v["n"],
-                kind="FilterOptionMinMax",
-                values=(
-                    FilterOptionValue(label=v["v"][0], value=float(v["v"][0])),
-                    FilterOptionValue(label=v["v"][1], value=float(v["v"][1])),
-                ),
+                kind="MinMaxFilterOption",
+                values=(v["v"][0], v["v"][1]),
             )
             for v in rows
         ]
-
-        # conn = None
-        # filter_options: list[FilterOptionCategory | FilterOptionMinMax] = []
-
-        # try:
-        #     conn = self._pool.getconn()
-
-        #     with conn.cursor() as cursor:
-        #         # Get category columns filter options
-        #         category_options = self._get_category_filter_options(cursor)
-        #         filter_options.extend(category_options)
-
-        #         # Get numeric (fact) columns filter options
-        #         numeric_options = self._get_numeric_filter_options(cursor)
-        #         filter_options.extend(numeric_options)
-
-        #     return filter_options
-
-        # except psycopg2.Error as e:
-        #     logger.error("Error getting filter options: %s", e)
-        #     raise RuntimeError(f"Database error when getting filter options: {e}") from e
-
-        # finally:
-        #     if conn is not None and self._pool is not None:
-        #         self._pool.putconn(conn)
 
     def _build_sql_query(self, query: QueryRequest) -> tuple[str, dict[str, Any]]:
         """Build a SQL query from a QueryRequest.
@@ -269,7 +239,7 @@ class PostgresAdapter(IRepository, metaclass=SingletonMeta):
 
         return sql, params
 
-    def _get_category_filter_options(self, cursor) -> list[FilterOptionCategory]:
+    def _get_category_filter_options(self, cursor) -> list[CategoricalFilterOption]:
         """Get filter options for category columns.
 
         Args:
@@ -280,7 +250,7 @@ class PostgresAdapter(IRepository, metaclass=SingletonMeta):
         """
         # This is a placeholder implementation
         # In a real scenario, you would query the database for distinct values in category columns
-        options: list[FilterOptionCategory] = []
+        options: list[CategoricalFilterOption] = []
 
         # Example SQL to get distinct values for each category column
         # For each table and column combination marked as Category in the dataset
@@ -288,7 +258,7 @@ class PostgresAdapter(IRepository, metaclass=SingletonMeta):
 
         return options
 
-    def _get_numeric_filter_options(self, cursor) -> list[FilterOptionMinMax]:
+    def _get_numeric_filter_options(self, cursor) -> list[MinMaxFilterOption]:
         """Get filter options for numeric columns.
 
         Args:
@@ -299,7 +269,7 @@ class PostgresAdapter(IRepository, metaclass=SingletonMeta):
         """
         # This is a placeholder implementation
         # In a real scenario, you would query the database for min/max values of numeric columns
-        options: list[FilterOptionMinMax] = []
+        options: list[MinMaxFilterOption] = []
 
         # Example SQL to get min/max values for each numeric column
         # For each table and column combination marked as Fact in the dataset

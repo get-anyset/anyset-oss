@@ -9,8 +9,8 @@ from ..dependencies import get_repository, inject_dataset
 from ..models import (
     BaseQueryRequest,
     BaseResultset,
-    FilterOptionCategory,
-    FilterOptionMinMax,
+    CategoricalFilterOption,
+    MinMaxFilterOption,
     QueryRequest,
 )
 from ..repository_interface import IRepository
@@ -60,7 +60,7 @@ async def execute_query(
     return QueryResponseDTO(**resultset.model_dump())
 
 
-FilterOptionsDTO = list[FilterOptionMinMax | FilterOptionCategory]
+FilterOptionsDTO = list[MinMaxFilterOption | CategoricalFilterOption]
 
 
 @router.get(
