@@ -83,7 +83,7 @@ class Dataset(BaseModel):
     def dataset_cols_boolean(self) -> dict[str, list[str]]:
         """Dictionary of table names and their boolean columns."""
         return {
-            t.name: self.list_columns_classified_as(t.columns, ColumnType.boolean)
+            t.name: self.list_cols_classified_as(t.columns, ColumnType.boolean)
             for t in self.dataset_tables.values()
         }
 
@@ -92,7 +92,7 @@ class Dataset(BaseModel):
     def dataset_cols_datetime(self) -> dict[str, list[str]]:
         """Dictionary of table names and their datetime columns."""
         return {
-            t.name: self.list_columns_classified_as(t.columns, ColumnType.datetime)
+            t.name: self.list_cols_classified_as(t.columns, ColumnType.datetime)
             for t in self.dataset_tables.values()
         }
 
@@ -101,7 +101,7 @@ class Dataset(BaseModel):
     def dataset_cols_numeric_fact(self) -> dict[str, list[str]]:
         """Dictionary of table names and their fact columns."""
         return {
-            t.name: self.list_columns_classified_as(t.columns, ColumnType.numeric_fact)
+            t.name: self.list_cols_classified_as(t.columns, ColumnType.numeric_fact)
             for t in self.dataset_tables.values()
         }
 
@@ -110,7 +110,7 @@ class Dataset(BaseModel):
     def dataset_cols_numeric_other(self) -> dict[str, list[str]]:
         """Dictionary of table names and their other numeric columns."""
         return {
-            t.name: self.list_columns_classified_as(t.columns, ColumnType.numeric_other)
+            t.name: self.list_cols_classified_as(t.columns, ColumnType.numeric_other)
             for t in self.dataset_tables.values()
         }
 
@@ -119,7 +119,7 @@ class Dataset(BaseModel):
     def dataset_cols_text_category(self) -> dict[str, list[str]]:
         """Dictionary of table names and their category columns."""
         return {
-            t.name: self.list_columns_classified_as(t.columns, ColumnType.text_category)
+            t.name: self.list_cols_classified_as(t.columns, ColumnType.text_category)
             for t in self.dataset_tables.values()
         }
 
@@ -128,11 +128,23 @@ class Dataset(BaseModel):
     def dataset_cols_text_other(self) -> dict[str, list[str]]:
         """Dictionary of table names and their other text columns."""
         return {
-            t.name: self.list_columns_classified_as(t.columns, ColumnType.text_other)
+            t.name: self.list_cols_classified_as(t.columns, ColumnType.text_other)
             for t in self.dataset_tables.values()
         }
 
-    def list_columns_classified_as(
+    @computed_field  # type: ignore
+    @property
+    def dataset_cols_all(self) -> list[tuple[str, str]]:
+        """Flat list of table names and their columns."""
+        return [(t.name, c.name) for t in self.dataset_tables.values() for c in t.columns.values()]
+
+    @computed_field  # type: ignore
+    @property
+    def category_hierarchies_cols_all(self) -> list[tuple[str, str]]:
+        """Flat list of category hierarchy columns."""
+        return [item for hierarchy in self.category_hierarchies.values() for item in hierarchy]
+
+    def list_cols_classified_as(
         self,
         columns: dict[str, DatasetTableColumn],
         column_type: ColumnType,
@@ -140,7 +152,7 @@ class Dataset(BaseModel):
         """List the names of columns classified as a given type."""
         return [c.name for c in columns.values() if c.column_type == column_type]
 
-    def is_column_classified_as(
+    def is_col_classified_as(
         self,
         column_name: str,
         column_type: ColumnType,
@@ -154,9 +166,49 @@ class Dataset(BaseModel):
         except (KeyError, AttributeError) as ex:
             raise ValueError(f"InvalidColumnType {column_type}") from ex
 
+    def is_col_in_dataset(self, table_name: str, column_name: str) -> bool:
+        """Check if a column exists in a table."""
+        return (table_name, column_name) in self.dataset_cols_all
 
-# class QueryRequestFilter(PydanticBaseModel):
-#     """A filter for a query request."""
+    def is_col_in_category_hierarchy(self, table_name: str, column_name: str) -> bool:
+        """Check if a column exists in a category hierarchy."""
+        return (table_name, column_name) in self.category_hierarchies_cols_all
+
+    @model_validator(mode="after")
+    def validate_dataset_table_column_keys(self) -> "Dataset":
+        """Validate dataset table and column keys match their name properties."""
+        for table_key, table in self.dataset_tables.items():
+            if table_key != table.name:
+                raise ValueError(
+                    f"DatasetTableKeyMismatch dataset '{self._id}' "
+                    f"table_key '{table_key}' table_name '{table.name}'"
+                )
+            for column_key, column in table.columns.items():
+                if column_key != column.name:
+                    raise ValueError(
+                        f"DatasetTableColumnKeyMismatch dataset '{self._id}' table '{table.name}' "
+                        f"column_key '{column_key}' column_name '{column.name}'"
+                    )
+        return self
+
+    @model_validator(mode="after")
+    def validate_category_hierarchy_fields(self) -> "Dataset":
+        """Validate category hierarchy fields in the dataset."""
+        failed_validations = [
+            item
+            for item in self.category_hierarchies_cols_all
+            if not self.is_col_in_dataset(item[0], item[1])
+        ]
+        if failed_validations:
+            raise ValueError(
+                f"CategoryHierarchyFieldNotFound dataset '{self._id}' fields '{failed_validations}'"
+            )
+        return self
+
+
+class QueryRequestFilter(PydanticBaseModel):
+    """A filter for a query request."""
+
 
 #     ColumnName: str
 #     Operator: Literal[
@@ -309,7 +361,7 @@ class QueryRequest(BaseQueryRequest):
     def validate_filters(self) -> "QueryRequest":
         """Validate the filter columns exist in the table and values match the column data type."""
         for filter in self.filters:
-            is_category = self.dataset.is_column_classified_as(
+            is_category = self.dataset.is_col_classified_as(
                 filter.column_name,
                 ColumnType.text_category,
                 self.table_name,
@@ -319,7 +371,7 @@ class QueryRequest(BaseQueryRequest):
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"QueryRequestFilterCategoryInvalidColumn {filter.column_name}",
                 )
-            is_fact = self.dataset.is_column_classified_as(
+            is_fact = self.dataset.is_col_classified_as(
                 filter.column_name,
                 ColumnType.numeric_fact,
                 self.table_name,
@@ -358,7 +410,7 @@ class QueryRequest(BaseQueryRequest):
                     detail=f"CustomAggregationFunctionNotFound {agg.aggregation_function}",
                 )
 
-            if agg.kind == "QueryRequestAggregation" and not self.dataset.is_column_classified_as(
+            if agg.kind == "QueryRequestAggregation" and not self.dataset.is_col_classified_as(
                 column_name=agg.column_name,
                 column_type=ColumnType.numeric_fact,
                 table_name=self.table_name,
