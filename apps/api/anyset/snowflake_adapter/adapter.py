@@ -11,12 +11,15 @@ from sqlalchemy.dialects import registry
 import sqlalchemy.pool as pool
 
 from ..models import (
+    BaseResultsetColumn,
     CategoricalFilterOption,
     ColumnType,
     Dataset,
     FilterOptions,
     MinMaxFilterOption,
     QueryRequest,
+    QueryRequestAggregation,
+    QueryRequestCustomAggregation,
     Resultset,
 )
 from ..repository_interface import IRepository
@@ -57,7 +60,7 @@ class SnowflakeAdapter(IRepository, metaclass=SingletonMeta):
         """Set up the connection pool for PostgreSQL."""
         try:
             self._pool = pool.QueuePool(
-                self._get_connection,
+                self._get_connection,  # type: ignore
                 pool_size=self.settings.pool_size,
                 max_overflow=self.settings.pool_max_overflow,
             )
@@ -79,11 +82,139 @@ class SnowflakeAdapter(IRepository, metaclass=SingletonMeta):
         Returns:
             Resultset - The resultset from the query
         """
-        return Resultset(
-            dataset=self.dataset._id,
-            version=self.dataset.version,
-            rows=0,
-            columns=[],
+        if self._pool is None:
+            raise RuntimeError("PostgreSQLConnectionPoolNotInitialized")
+
+        sql, params = self._build_sql_query(query)
+        logger.debug(sql)
+        try:
+            conn = self._pool.connect()
+            cursor = conn.cursor()
+
+            cursor.execute(sql, params)
+            data = cursor.fetchall()
+            columns = [
+                BaseResultsetColumn(
+                    alias=col[0],
+                    breakdown=None,
+                    data=[row[i] for row in data],
+                )
+                for i, col in enumerate(cursor.description)
+            ]
+            resultset = Resultset(
+                dataset=self.dataset.name,
+                version=self.dataset.version,
+                rows=cursor.rowcount or 0,
+                columns=columns,
+            )
+        except snowflake.connector.errors.Error as ex:
+            raise RuntimeError(f"SnowflakeConnectionError {ex}") from ex
+        finally:
+            cursor.close() if cursor else None
+            conn.close() if conn else None
+
+        return resultset
+
+    def _build_sql_query(self, query: QueryRequest) -> tuple[str, dict[str, Any]]:
+        """Build a SQL query from a QueryRequest.
+
+        Args:
+            query: The query request
+
+        Returns:
+            Tuple of SQL string and parameters
+        """
+        source = f"{self.settings.database}.{self.settings.schema_}.{query.table_name}"
+        select: list[str] = []
+        where: list[str] = []
+        order_by: list[str] = []
+
+        params: dict[str, Any] = {}
+        param_idx = 0
+
+        for qselect in query.select:
+            select.append(f'"{qselect.column_name}" AS "{qselect.alias or qselect.column_name}"')
+
+            # Add to group by if needed
+            # if query.breakdown is not None:
+            #     group_by_parts.append(f'"{column_name}"')
+
+        for qagg in query.aggregations:
+            if isinstance(qagg, QueryRequestAggregation):
+                select.append(
+                    f'{qagg.aggregation_function}("{qagg.column_name}") AS "{qagg.alias}"'
+                )
+            elif isinstance(qagg, QueryRequestCustomAggregation):
+                select.append(f'{qagg.aggregation_function} AS "{qagg.alias}"')
+
+        for qfilter in query.filters:
+            if qfilter.kind == "QueryRequestFilterCategory" and qfilter.values:
+                param_name = f"p{param_idx}"
+                where.append(f'"{qfilter.column_name}" IN (%({param_name})s)')
+                params[param_name] = f"{','.join(qfilter.values)}"
+                param_idx += 1
+            elif qfilter.kind == "QueryRequestFilterFact" and qfilter.values:
+                min_val, max_val = qfilter.values
+
+                if min_val is not None:
+                    param_name = f"p{param_idx}"
+                    where.append(f'"{qfilter.column_name}" >= %({param_name})s')
+                    params[param_name] = min_val
+                    param_idx += 1
+
+                if max_val is not None:
+                    param_name = f"p{param_idx}"
+                    where.append(f'"{qfilter.column_name}" <= %({param_name})s')
+                    params[param_name] = max_val  # This is a single value, not a list
+                    param_idx += 1
+
+        order_by.extend(
+            [f'"{qorder.column_name}" {qorder.direction}' for qorder in query.order_by]
+            if query.order_by
+            else ["1 ASC"]
+        )
+
+        offset = query.pagination.offset
+        limit = query.pagination.limit
+
+        sql = f"SELECT {', '.join(select) or '*'} FROM {source}"
+
+        if where:
+            sql += f" WHERE {' AND '.join(where)}"
+        if query.group_by:
+            sql += f" GROUP BY {', '.join(query.group_by)}"
+        if order_by:
+            sql += f" ORDER BY {', '.join(order_by)}"
+        if limit is not None:
+            sql += f" LIMIT {limit}"
+        if offset is not None:
+            sql += f" OFFSET {offset}"
+
+        return sql, params
+
+    async def get_filter_options(self) -> FilterOptions:
+        """Get filter options from the database.
+
+        Returns:
+            Filter options for the UI
+        """
+        if self._pool is None:
+            raise RuntimeError("PostgreSQLConnectionPoolNotInitialized")
+
+        non_hierarchical_fields = []
+        for table_name, column_names in [
+            *self.dataset.dataset_cols_text_category.items(),
+            *self.dataset.dataset_cols_boolean.items(),
+            *self.dataset.dataset_cols_numeric_fact.items(),
+            *self.dataset.dataset_cols_datetime.items(),
+        ]:
+            for column_name in column_names:
+                if not self.dataset.is_col_in_category_hierarchy(table_name, column_name):
+                    non_hierarchical_fields.append((table_name, column_name))
+
+        return (
+            await self._get_filter_options_in_category_hierarchies()
+            + await self._get_simple_filter_options(non_hierarchical_fields)
         )
 
     def _process_filter_options(self, row: dict[str, Any]) -> list[Any]:
@@ -278,28 +409,3 @@ class SnowflakeAdapter(IRepository, metaclass=SingletonMeta):
             )
             for key, fields in self.dataset.category_hierarchies.items()
         ]
-
-    async def get_filter_options(self) -> FilterOptions:
-        """Get filter options from the database.
-
-        Returns:
-            Filter options for the UI
-        """
-        if self._pool is None:
-            raise RuntimeError("PostgreSQLConnectionPoolNotInitialized")
-
-        non_hierarchical_fields = []
-        for table_name, column_names in [
-            *self.dataset.dataset_cols_text_category.items(),
-            *self.dataset.dataset_cols_boolean.items(),
-            *self.dataset.dataset_cols_numeric_fact.items(),
-            *self.dataset.dataset_cols_datetime.items(),
-        ]:
-            for column_name in column_names:
-                if not self.dataset.is_col_in_category_hierarchy(table_name, column_name):
-                    non_hierarchical_fields.append((table_name, column_name))
-
-        return (
-            await self._get_filter_options_in_category_hierarchies()
-            + await self._get_simple_filter_options(non_hierarchical_fields)
-        )
