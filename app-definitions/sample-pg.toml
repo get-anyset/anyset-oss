@@ -1,0 +1,121 @@
+name        = "Sample PostgreSQL Dataset"
+description = "A sample app for the AnySet Framework backed by PostgreSQL"
+
+path_prefix = "sample-pg"
+version     = 1
+
+adapter = "postgresql"
+
+[adapter_config]
+host     = "localhost"
+port     = 5432
+database = "mydatabase"
+user     = "myuser"
+password = "$env!PG_SAMPLE_DATASET_PASSWORD"
+
+[dataset_tables.cc_transactions]
+name = "cc_transactions"
+
+[dataset_tables.cc_transactions.columns.trans_num]
+name        = "trans_num"
+column_type = "text_other"
+
+[dataset_tables.cc_transactions.columns.trans_date_trans_time]
+name        = "trans_date_trans_time"
+column_type = "datetime"
+
+[dataset_tables.cc_transactions.columns.unix_time]
+name        = "unix_time"
+column_type = "numeric_other"
+
+[dataset_tables.cc_transactions.columns.is_fraud]
+name        = "is_fraud"
+column_type = "boolean"
+
+[dataset_tables.cc_transactions.columns.cc_num]
+name        = "cc_num"
+column_type = "text_other"
+
+[dataset_tables.cc_transactions.columns.merchant]
+name        = "merchant"
+column_type = "text_other"
+
+[dataset_tables.cc_transactions.columns.merch_zipcode]
+name        = "merch_zipcode"
+column_type = "text_other"
+
+[dataset_tables.cc_transactions.columns.merchant_lat]
+name        = "merchant_lat"
+column_type = "numeric_other"
+
+[dataset_tables.cc_transactions.columns.merchant_long]
+name        = "merchant_long"
+column_type = "numeric_other"
+
+[dataset_tables.cc_transactions.columns.category]
+name        = "category"
+column_type = "text_category"
+
+[dataset_tables.cc_transactions.columns.amt]
+name        = "amt"
+column_type = "numeric_fact"
+
+[dataset_tables.cc_transactions.columns.first]
+name        = "first"
+column_type = "text_other"
+
+[dataset_tables.cc_transactions.columns.last]
+name        = "last"
+column_type = "text_other"
+
+[dataset_tables.cc_transactions.columns.gender]
+name        = "gender"
+column_type = "text_category"
+
+[dataset_tables.cc_transactions.columns.street]
+name        = "street"
+column_type = "text_other"
+
+[dataset_tables.cc_transactions.columns.city]
+name        = "city"
+parent      = ["cc_transactions", "state"]
+column_type = "text_other"
+
+[dataset_tables.cc_transactions.columns.state]
+name        = "state"
+column_type = "text_category"
+
+[dataset_tables.cc_transactions.columns.zip]
+name        = "zip"
+column_type = "text_other"
+
+[dataset_tables.cc_transactions.columns.lat]
+name        = "lat"
+column_type = "numeric_other"
+
+[dataset_tables.cc_transactions.columns.long]
+name        = "long"
+column_type = "numeric_other"
+
+[dataset_tables.cc_transactions.columns.city_pop]
+name        = "city_pop"
+column_type = "numeric_fact"
+
+[dataset_tables.cc_transactions.columns.job]
+name        = "job"
+column_type = "text_category"
+
+[dataset_tables.cc_transactions.columns.dob]
+name        = "dob"
+column_type = "datetime"
+
+[category_hierarchies]
+geo = [
+    ["cc_transactions", "state"], # [table_name, column_name]
+    ["cc_transactions", "city"],
+]
+
+[custom_aggregation_functions]
+# SUM_OF_TRANSACTION_AMOUNT = """
+# SELECT SUM(TRANSACTION_AMOUNT) FROM CC_TRANSACTIONS
+# """

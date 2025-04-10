@@ -54,7 +54,12 @@ class SnowflakeAdapter(IRepository, metaclass=SingletonMeta):
 
     def _get_connection(self) -> snowflake.connector.SnowflakeConnection:
         """Get a Snowflake connection."""
-        return snowflake.connector.connect(**self.settings.model_dump())
+        settings = self.settings.model_dump(
+            exclude_none=True,
+            exclude={"private_key_str", "private_key_passphrase"},
+            by_alias=True,
+        )
+        return snowflake.connector.connect(**settings)
 
     def _setup_connection_pool(self) -> None:
         """Set up the connection pool for PostgreSQL."""
@@ -86,7 +91,7 @@ class SnowflakeAdapter(IRepository, metaclass=SingletonMeta):
             raise RuntimeError("PostgreSQLConnectionPoolNotInitialized")
 
         sql, params = self._build_sql_query(query)
-        logger.debug(sql)
+
         try:
             conn = self._pool.connect()
             cursor = conn.cursor()
@@ -380,7 +385,7 @@ class SnowflakeAdapter(IRepository, metaclass=SingletonMeta):
         GROUP BY {group_by}
         ORDER BY {order_by}
         """
-        logger.debug(statement)
+
         try:
             conn = self._pool.connect()
             cursor = conn.cursor()
