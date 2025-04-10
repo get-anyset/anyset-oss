@@ -160,7 +160,7 @@ class Dataset(BaseModel):
     ) -> bool:
         """Check if a column is classified as a given type."""
         try:
-            attr_name = f"dataset_columns_{column_type.value.lower()}"
+            attr_name = f"dataset_cols_{column_type.value.lower()}"
             column_names = getattr(self, attr_name)[table_name]
             return column_name in column_names
         except (KeyError, AttributeError) as ex:
