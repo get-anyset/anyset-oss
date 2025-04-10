@@ -86,36 +86,6 @@ class SnowflakeAdapter(IRepository, metaclass=SingletonMeta):
             columns=[],
         )
 
-    def _create_filter_options_statement(self, table: str, columns: list[str]) -> list[str]:
-        """Create a SQL statement for retrieving filter options values from a column.
-
-        Args:
-            table: str - The table name
-            columns: list[str] - The column names
-
-        Returns:
-            str - The SQL statement
-        """
-        statements = []
-        for col in columns:
-            col_type = self.dataset.dataset_tables[table].columns[col].column_type.value
-
-            if col_type in [ColumnType.boolean, ColumnType.text_category]:
-                arr = f"ARRAY_AGG(DISTINCT {col}::varchar)"
-            elif col_type in [ColumnType.numeric_fact, ColumnType.datetime]:
-                arr = f"ARRAY_CONSTRUCT(MIN({col}), MAX({col}))"
-            else:
-                raise ValueError(f"InvalidColumnType {col_type}")
-
-            statements.append(f"""
-            SELECT
-                '{col}' AS n,
-                '{col_type}' AS k,
-                {arr} AS v
-            FROM {self.settings.database}.{self.settings.schema_}.{table}
-            """)
-        return statements
-
     def _process_filter_options(self, row: dict[str, Any]) -> list[Any]:
         col_type = row["K"]
         if col_type in [ColumnType.text_category]:
@@ -129,23 +99,61 @@ class SnowflakeAdapter(IRepository, metaclass=SingletonMeta):
         else:
             raise ValueError(f"InvalidColumnType {col_type}")
 
-    async def get_filter_options(self) -> FilterOptions:
+    def _create_simple_filter_options_statement(
+        self,
+        table: str,
+        column_name: str,
+    ) -> str:
+        """Create a SQL statement for retrieving filter options values from a column.
+
+        Args:
+            table: str - The table name
+            column_name: str - The column name
+
+        Returns:
+            str - The SQL statement
+        """
+        col_type = self.dataset.dataset_tables[table].columns[column_name].column_type.value
+
+        if col_type in [ColumnType.boolean, ColumnType.text_category]:
+            arr = f"ARRAY_AGG(DISTINCT {column_name}::varchar)"
+        elif col_type in [ColumnType.numeric_fact, ColumnType.datetime]:
+            arr = f"ARRAY_CONSTRUCT(MIN({column_name}), MAX({column_name}))"
+        else:
+            raise ValueError(f"InvalidColumnType {col_type}")
+
+        return f"""
+        SELECT
+            '{column_name}' AS n,
+            '{col_type}' AS k,
+            {arr} AS v
+        FROM {self.settings.database}.{self.settings.schema_}.{table}
+        """
+
+    async def _get_simple_filter_options(
+        self,
+        fields: list[tuple[str, str]],
+    ) -> FilterOptions:
         """Get filter options from the database.
 
         Returns:
             Filter options for the UI
         """
+        """
+        split hierarchical and non-hierarchical columns
+        run each set through their respective get_filter_options methods
+        combine results into a single FilterOptions object
+        """
         if self._pool is None:
             raise RuntimeError("PostgreSQLConnectionPoolNotInitialized")
 
-        statements = []
-        for k, v in [
-            *self.dataset.dataset_cols_text_category.items(),
-            *self.dataset.dataset_cols_boolean.items(),
-            *self.dataset.dataset_cols_numeric_fact.items(),
-            *self.dataset.dataset_cols_datetime.items(),
-        ]:
-            statements.extend(self._create_filter_options_statement(k, v))
+        statements = [
+            self._create_simple_filter_options_statement(
+                table=table,
+                column_name=column_name,
+            )
+            for table, column_name in fields
+        ]
 
         try:
             conn = self._pool.connect()
@@ -181,3 +189,117 @@ class SnowflakeAdapter(IRepository, metaclass=SingletonMeta):
             )
             for _, row in data.iterrows()
         ]
+
+    def _walk_hierarchy(
+        self,
+        data: pd.DataFrame,
+        columns: list[str],
+        index: int = 0,
+    ) -> CategoricalFilterOption:
+        """Walk the hierarchy and return a CategoricalFilterOption with nested children.
+
+        Args:
+            data: pd.DataFrame - The data to walk the hierarchy on
+            columns: list[str] - The columns to walk the hierarchy on
+            index: int - The index of the column to walk the hierarchy on
+
+        Returns:
+            CategoricalFilterOption - The CategoricalFilterOption with nested children
+        """
+        col = columns[index]
+        unique_values = data[col].dropna().unique().tolist()
+
+        if (index + 1) == len(columns):
+            values = unique_values
+        else:
+            values = [
+                (v, self._walk_hierarchy(data[data[col] == v], columns, index + 1))
+                for v in unique_values
+            ]
+
+        return CategoricalFilterOption(
+            name=columns[index],
+            values=values,
+        )
+
+    async def _get_filter_options_for_single_hierarchy_definition(
+        self,
+        key: str,
+        fields: list[tuple[str, str, str]],
+    ) -> CategoricalFilterOption:
+        """Get filter options for a single hierarchy from the database.
+
+        Args:
+            key: str - The key of the hierarchy
+            fields: list[tuple[str, str]] - The fields of the hierarchy [table, column, table.column]
+
+        Returns:
+            Filter options for the UI
+        """
+        # TODO: Add support for multi-table datasets
+        table = f"{self.settings.database}.{self.settings.schema_}.{fields[0][0]}"
+
+        selected_cols = ", ".join([f'{f[0]}.{f[1]} AS "{f[2]}"' for f in fields])
+        group_by = ", ".join([f'"{f[2]}"' for f in fields])
+        order_by = ", ".join([f'"{f[2]}"' for f in fields])
+        statement = f"""
+        SELECT
+            DISTINCT {selected_cols}
+        FROM {table}
+        GROUP BY {group_by}
+        ORDER BY {order_by}
+        """
+        logger.debug(statement)
+        try:
+            conn = self._pool.connect()
+            cursor = conn.cursor()
+            cursor.execute(statement)
+            data = pd.DataFrame(cursor.fetchall(), columns=[col[0] for col in cursor.description])
+        except snowflake.connector.errors.Error as ex:
+            raise RuntimeError(f"SnowflakeConnectionError {ex}") from ex
+        finally:
+            cursor.close() if cursor else None
+            conn.close() if conn else None
+
+        return self._walk_hierarchy(data=data, columns=[v[2] for v in fields])
+
+    async def _get_filter_options_in_category_hierarchies(self) -> FilterOptions:
+        """Get filter options for fields in a category hierarchy from the database.
+
+        TODO: Add support for multi-table datasets.
+
+        Returns:
+            Filter options for the UI
+        """
+        return [
+            await self._get_filter_options_for_single_hierarchy_definition(
+                key,
+                [(f[0], f[1], f"{f[0]}.{f[1]}") for f in fields],
+            )
+            for key, fields in self.dataset.category_hierarchies.items()
+        ]
+
+    async def get_filter_options(self) -> FilterOptions:
+        """Get filter options from the database.
+
+        Returns:
+            Filter options for the UI
+        """
+        if self._pool is None:
+            raise RuntimeError("PostgreSQLConnectionPoolNotInitialized")
+
+        non_hierarchical_fields = []
+        for table_name, column_names in [
+            *self.dataset.dataset_cols_text_category.items(),
+            *self.dataset.dataset_cols_boolean.items(),
+            *self.dataset.dataset_cols_numeric_fact.items(),
+            *self.dataset.dataset_cols_datetime.items(),
+        ]:
+            for column_name in column_names:
+                if not self.dataset.is_col_in_category_hierarchy(table_name, column_name):
+                    non_hierarchical_fields.append((table_name, column_name))
+
+        return (
+            await self._get_filter_options_in_category_hierarchies()
+            + await self._get_simple_filter_options(non_hierarchical_fields)
+        )
