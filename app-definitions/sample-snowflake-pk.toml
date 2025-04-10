@@ -1,0 +1,123 @@
+name        = "Sample Snowflake Dataset With Private Key Auth"
+description = "A sample app for the AnySet Framework backed by Snowflake with Private Key Authentication"
+
+path_prefix = "sample-snowflake-pk"
+version     = 1
+
+adapter = "snowflake"
+
+[adapter_config]
+authenticator          = "snowflake_jwt"
+account                = "$env!SNOWFLAKE_PK_SAMPLE_DATASET_ACCOUNT"
+user                   = "$env!SNOWFLAKE_PK_SAMPLE_DATASET_USER"
+private_key_str        = "$env!SNOWFLAKE_PK_SAMPLE_DATASET_PRIVATE_KEY"
+private_key_passphrase = "$env!SNOWFLAKE_PK_SAMPLE_DATASET_PRIVATE_KEY_PASSPHRASE"
+database               = "SANDBOX"
+schema                 = "ANYSET_SAMPLE_DATASET"
+warehouse              = "COMPUTE_WH"
+
+[dataset_tables.CC_TRANSACTIONS]
+name = "CC_TRANSACTIONS"
+
+[dataset_tables.CC_TRANSACTIONS.columns.TRANS_NUM]
+name        = "TRANS_NUM"
+column_type = "text_other"
+
+[dataset_tables.CC_TRANSACTIONS.columns.TRANS_DATE_TRANS_TIME]
+name        = "TRANS_DATE_TRANS_TIME"
+column_type = "datetime"
+
+[dataset_tables.CC_TRANSACTIONS.columns.UNIX_TIME]
+name        = "UNIX_TIME"
+column_type = "numeric_other"
+
+[dataset_tables.CC_TRANSACTIONS.columns.IS_FRAUD]
+name        = "IS_FRAUD"
+column_type = "boolean"
+
+[dataset_tables.CC_TRANSACTIONS.columns.CC_NUM]
+name        = "CC_NUM"
+column_type = "text_other"
+
+[dataset_tables.CC_TRANSACTIONS.columns.MERCHANT]
+name        = "MERCHANT"
+column_type = "text_other"
+
+[dataset_tables.CC_TRANSACTIONS.columns.MERCH_ZIPCODE]
+name        = "MERCH_ZIPCODE"
+column_type = "text_other"
+
+[dataset_tables.CC_TRANSACTIONS.columns.MERCHANT_LAT]
+name        = "MERCHANT_LAT"
+column_type = "numeric_other"
+
+[dataset_tables.CC_TRANSACTIONS.columns.MERCHANT_LONG]
+name        = "MERCHANT_LONG"
+column_type = "numeric_other"
+
+[dataset_tables.CC_TRANSACTIONS.columns.CATEGORY]
+name        = "CATEGORY"
+column_type = "text_category"
+
+[dataset_tables.CC_TRANSACTIONS.columns.AMT]
+name        = "AMT"
+column_type = "numeric_fact"
+
+[dataset_tables.CC_TRANSACTIONS.columns.FIRST]
+name        = "FIRST"
+column_type = "text_other"
+
+[dataset_tables.CC_TRANSACTIONS.columns.LAST]
+name        = "LAST"
+column_type = "text_other"
+
+[dataset_tables.CC_TRANSACTIONS.columns.GENDER]
+name        = "GENDER"
+column_type = "text_category"
+
+[dataset_tables.CC_TRANSACTIONS.columns.STREET]
+name        = "STREET"
+column_type = "text_other"
+
+[dataset_tables.CC_TRANSACTIONS.columns.CITY]
+name        = "CITY"
+column_type = "text_category"
+
+[dataset_tables.CC_TRANSACTIONS.columns.STATE]
+name        = "STATE"
+column_type = "text_category"
+
+[dataset_tables.CC_TRANSACTIONS.columns.ZIP]
+name        = "ZIP"
+column_type = "text_other"
+
+[dataset_tables.CC_TRANSACTIONS.columns.LAT]
+name        = "LAT"
+column_type = "numeric_other"
+
+[dataset_tables.CC_TRANSACTIONS.columns.LONG]
+name        = "LONG"
+column_type = "numeric_other"
+
+[dataset_tables.CC_TRANSACTIONS.columns.CITY_POP]
+name        = "CITY_POP"
+column_type = "numeric_fact"
+
+[dataset_tables.CC_TRANSACTIONS.columns.JOB]
+name        = "JOB"
+column_type = "text_category"
+
+[dataset_tables.CC_TRANSACTIONS.columns.DOB]
+name        = "DOB"
+column_type = "datetime"
+
+[category_hierarchies]
+geo = [
+    ["CC_TRANSACTIONS", "STATE"], # [table_name, column_name]
+    ["CC_TRANSACTIONS", "CITY"],
+]
+
+[custom_aggregation_functions]
+# SUM_OF_TRANSACTION_AMOUNT = """
+# SELECT SUM(TRANSACTION_AMOUNT) FROM CC_TRANSACTIONS
+# """
