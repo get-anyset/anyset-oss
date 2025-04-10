@@ -465,8 +465,12 @@ class CategoricalFilterOption(BaseModel):
     """
 
     kind: Literal["CategoricalFilterOption"] = "CategoricalFilterOption"
-    values: list[bool] | list[str]
-    children: list["CategoricalFilterOption"] | None = None
+    values: (
+        list[bool]
+        | list[str]
+        | list[tuple[bool, "CategoricalFilterOption"]]
+        | list[tuple[str, "CategoricalFilterOption"]]
+    )
 
 
 FilterOptions = list[MinMaxFilterOption | CategoricalFilterOption]
