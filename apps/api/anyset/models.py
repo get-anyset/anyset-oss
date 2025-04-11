@@ -74,9 +74,9 @@ class Dataset(BaseModel):
 
     dataset_tables: dict[str, DatasetTable]
 
-    category_hierarchies: dict[str, list[tuple[str, str]]]
+    category_hierarchies: dict[str, list[tuple[str, str]]] = {}
 
-    custom_aggregation_functions: dict[str, str] | None = None
+    custom_aggregation_functions: dict[str, str] = {}
 
     @computed_field  # type: ignore
     @property
