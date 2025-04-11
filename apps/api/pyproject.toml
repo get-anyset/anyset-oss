@@ -103,7 +103,7 @@ addopts = """ \
 --cov-branch \
 --cov-report=term-missing \
 --cov-fail-under=80 \
-test/
+tests/
 """
 
 [tool.coverage.run]
