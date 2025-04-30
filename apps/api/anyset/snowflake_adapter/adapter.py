@@ -343,8 +343,9 @@ class SnowflakeAdapter(IRepository, metaclass=SingletonMeta):
             CategoricalFilterOption - The CategoricalFilterOption with nested children
         """
         col = columns[index]
-        unique_values = data[col].dropna().unique().tolist()
+        unique_values: list[str] = pd.Series(data[col].dropna().unique()).tolist()
 
+        values: list[str] | list[tuple[str, CategoricalFilterOption]]
         if (index + 1) == len(columns):
             values = unique_values
         else:

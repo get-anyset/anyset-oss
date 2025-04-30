@@ -8,7 +8,6 @@ adapter = "snowflake"
 
 [adapter_config]
 authenticator          = "snowflake_jwt"
-account                = "$env!SNOWFLAKE_PK_SAMPLE_DATASET_ACCOUNT"
 user                   = "$env!SNOWFLAKE_PK_SAMPLE_DATASET_USER"
 private_key_str        = "$env!SNOWFLAKE_PK_SAMPLE_DATASET_PRIVATE_KEY"
 private_key_passphrase = "$env!SNOWFLAKE_PK_SAMPLE_DATASET_PRIVATE_KEY_PASSPHRASE"

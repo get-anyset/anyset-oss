@@ -7,14 +7,12 @@ from anyset.models import (
     BaseQueryRequest,
     BaseResultset,
     BaseResultsetColumn,
-    ColumnDataType,
+    CategoricalFilterOption,
     ColumnType,
     Dataset,
     DatasetTable,
     DatasetTableColumn,
-    FilterOptionCategory,
-    FilterOptionMinMax,
-    FilterOptionValue,
+    MinMaxFilterOption,
     QueryRequestAggregation,
     QueryRequestFilterCategory,
     QueryRequestFilterFact,
@@ -35,23 +33,18 @@ def test_dataset_table_column():
     """Test DatasetTableColumn model."""
     column = DatasetTableColumn(
         name="test_column",
-        column_type=ColumnType.Category,
-        column_data_type=ColumnDataType.String,
-        parent="parent_table",
+        column_type=ColumnType.text_category,
     )
     assert column.kind == "DatasetTableColumn"
     assert column.name == "test_column"
-    assert column.column_type == ColumnType.Category
-    assert column.column_data_type == ColumnDataType.String
-    assert column.parent == "parent_table"
+    assert column.column_type == ColumnType.text_category
 
 
 def test_dataset_table():
     """Test DatasetTable model."""
     column = DatasetTableColumn(
         name="test_column",
-        column_type=ColumnType.Category,
-        column_data_type=ColumnDataType.String,
+        column_type=ColumnType.text_category,
     )
     table = DatasetTable(name="test_table", columns={"test_column": column})
     assert table.kind == "DatasetTable"
@@ -64,23 +57,19 @@ def test_dataset_column_classification():
     """Test Dataset column classification methods."""
     category_column = DatasetTableColumn(
         name="category_col",
-        column_type=ColumnType.Category,
-        column_data_type=ColumnDataType.String,
+        column_type=ColumnType.text_category,
     )
     datetime_column = DatasetTableColumn(
         name="datetime_col",
-        column_type=ColumnType.DateTime,
-        column_data_type=ColumnDataType.DateTime,
+        column_type=ColumnType.datetime,
     )
     fact_column = DatasetTableColumn(
         name="fact_col",
-        column_type=ColumnType.Fact,
-        column_data_type=ColumnDataType.Number,
+        column_type=ColumnType.numeric_fact,
     )
     other_column = DatasetTableColumn(
         name="other_col",
-        column_type=ColumnType.Other,
-        column_data_type=ColumnDataType.String,
+        column_type=ColumnType.text_other,
     )
 
     table = DatasetTable(
@@ -99,22 +88,22 @@ def test_dataset_column_classification():
         version=1,
         database_name="test_db",
         dataset_tables={"test_table": table},
-        adapter=RepositoryOption.InMemory,
+        adapter=RepositoryOption.in_memory,
     )
 
-    assert "category_col" in dataset.dataset_columns_category["test_table"]
-    assert "datetime_col" in dataset.dataset_columns_datetime["test_table"]
-    assert "fact_col" in dataset.dataset_columns_fact["test_table"]
-    assert "other_col" in dataset.dataset_columns_other["test_table"]
+    assert "category_col" in dataset.dataset_cols_text_category["test_table"]
+    assert "datetime_col" in dataset.dataset_cols_datetime["test_table"]
+    assert "fact_col" in dataset.dataset_cols_numeric_fact["test_table"]
+    assert "other_col" in dataset.dataset_cols_text_other["test_table"]
 
-    assert dataset.is_column_classified_as("category_col", ColumnType.Category, "test_table")
-    assert dataset.is_column_classified_as("datetime_col", ColumnType.DateTime, "test_table")
-    assert dataset.is_column_classified_as("fact_col", ColumnType.Fact, "test_table")
-    assert dataset.is_column_classified_as("other_col", ColumnType.Other, "test_table")
+    assert dataset.is_col_classified_as("category_col", ColumnType.text_category, "test_table")
+    assert dataset.is_col_classified_as("datetime_col", ColumnType.datetime, "test_table")
+    assert dataset.is_col_classified_as("fact_col", ColumnType.numeric_fact, "test_table")
+    assert dataset.is_col_classified_as("other_col", ColumnType.text_other, "test_table")
 
     # Test invalid column type
     with pytest.raises(ValueError):
-        dataset.is_column_classified_as("invalid_col", ColumnType.Category, "invalid_table")
+        dataset.is_col_classified_as("invalid_col", ColumnType.text_category, "invalid_table")
 
 
 def test_query_request_models():
@@ -187,34 +176,15 @@ def test_base_resultset():
 
 def test_filter_option_models():
     """Test filter option related models."""
-    # Test FilterOptionValue
-    option_value = FilterOptionValue(label="Test Label", value="test_value")
-    assert option_value.label == "Test Label"
-    assert option_value.value == "test_value"
-
-    # Test FilterOptionMinMax
-    min_max = FilterOptionMinMax(
-        name="test_minmax",
-        values=(
-            FilterOptionValue(label="Min", value=0.0),
-            FilterOptionValue(label="Max", value=100.0),
-        ),
-    )
-    assert min_max.kind == "FilterOptionMinMax"
+    # Test MinMaxFilterOption
+    min_max = MinMaxFilterOption(name="test_minmax", values=(0.0, 100.0))
+    assert min_max.kind == "MinMaxFilterOption"
     assert min_max.name == "test_minmax"
-    assert min_max.values[0].value == 0.0
-    assert min_max.values[1].value == 100.0
+    assert min_max.values[0] == 0.0
+    assert min_max.values[1] == 100.0
 
-    # Test FilterOptionCategory
-    category = FilterOptionCategory(
-        name="test_category",
-        values=[
-            FilterOptionValue(label="Option 1", value="value1"),
-            FilterOptionValue(label="Option 2", value="value2"),
-        ],
-        parent_id="parent_id",
-    )
-    assert category.kind == "FilterOptionCategory"
+    # Test CategoricalFilterOption
+    category = CategoricalFilterOption(name="test_category", values=["value1", "value2"])
+    assert category.kind == "CategoricalFilterOption"
     assert category.name == "test_category"
     assert len(category.values) == 2
-    assert category.parent_id == "parent_id"

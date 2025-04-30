@@ -52,7 +52,7 @@ def test_singleton_with_dataset():
         name="test1",
         path_prefix="test/path1",
         version=1,
-        adapter=RepositoryOption.InMemory,
+        adapter=RepositoryOption.in_memory,
         dataset_tables={},
     )
 
@@ -60,7 +60,7 @@ def test_singleton_with_dataset():
         name="test2",
         path_prefix="test/path1",  # Same path
         version=1,  # Same version
-        adapter=RepositoryOption.InMemory,
+        adapter=RepositoryOption.in_memory,
         dataset_tables={},
     )
 
@@ -68,7 +68,7 @@ def test_singleton_with_dataset():
         name="test3",
         path_prefix="test/path2",  # Different path
         version=1,
-        adapter=RepositoryOption.InMemory,
+        adapter=RepositoryOption.in_memory,
         dataset_tables={},
     )
 
@@ -76,7 +76,7 @@ def test_singleton_with_dataset():
         name="test4",
         path_prefix="test/path1",  # Same path
         version=2,  # Different version
-        adapter=RepositoryOption.InMemory,
+        adapter=RepositoryOption.in_memory,
         dataset_tables={},
     )
 
@@ -112,7 +112,7 @@ def test_different_paths_create_different_instances():
         name="test1",
         path_prefix="test/path1",
         version=1,
-        adapter=RepositoryOption.InMemory,
+        adapter=RepositoryOption.in_memory,
         dataset_tables={},
     )
 
@@ -120,7 +120,7 @@ def test_different_paths_create_different_instances():
         name="test2",
         path_prefix="test/path2",
         version=1,
-        adapter=RepositoryOption.InMemory,
+        adapter=RepositoryOption.in_memory,
         dataset_tables={},
     )
 
@@ -147,7 +147,7 @@ def test_different_versions_create_different_instances():
         name="test1",
         path_prefix="test/path",
         version=1,
-        adapter=RepositoryOption.InMemory,
+        adapter=RepositoryOption.in_memory,
         dataset_tables={},
     )
 
@@ -155,7 +155,7 @@ def test_different_versions_create_different_instances():
         name="test2",
         path_prefix="test/path",
         version=2,
-        adapter=RepositoryOption.InMemory,
+        adapter=RepositoryOption.in_memory,
         dataset_tables={},
     )
 

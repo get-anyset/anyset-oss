@@ -7,15 +7,13 @@ import pytest
 
 from anyset.models import (
     BaseResultsetColumn,
-    ColumnDataType,
+    CategoricalFilterOption,
     ColumnType,
     Dataset,
     DatasetTable,
     DatasetTableColumn,
-    FilterOptionCategory,
-    FilterOptionMinMax,
     FilterOptions,
-    FilterOptionValue,
+    MinMaxFilterOption,
     QueryRequest,
     QueryRequestAggregation,
     QueryRequestCustomAggregation,
@@ -35,18 +33,15 @@ def sample_dataset():
     """Create a sample dataset for testing."""
     category_column = DatasetTableColumn(
         name="category_col",
-        column_type=ColumnType.Category,
-        column_data_type=ColumnDataType.String,
+        column_type=ColumnType.text_category,
     )
     fact_column = DatasetTableColumn(
         name="fact_col",
-        column_type=ColumnType.Fact,
-        column_data_type=ColumnDataType.Number,
+        column_type=ColumnType.numeric_fact,
     )
     datetime_column = DatasetTableColumn(
         name="datetime_col",
-        column_type=ColumnType.DateTime,
-        column_data_type=ColumnDataType.DateTime,
+        column_type=ColumnType.datetime,
     )
 
     table = DatasetTable(
@@ -62,9 +57,8 @@ def sample_dataset():
         name="test_dataset",
         path_prefix="/test",
         version=1,
-        database_name="test_db",
         dataset_tables={"test_table": table},
-        adapter=RepositoryOption.InMemory,
+        adapter=RepositoryOption.in_memory,
         custom_aggregation_functions={"custom_sum": "SUM"},
     )
 
@@ -146,20 +140,8 @@ def sample_resultset(sample_dataset):
 def sample_filter_options():
     """Create sample filter options for testing."""
     return [
-        FilterOptionCategory(
-            name="category_col",
-            values=[
-                FilterOptionValue(label="Value 1", value="value1"),
-                FilterOptionValue(label="Value 2", value="value2"),
-            ],
-        ),
-        FilterOptionMinMax(
-            name="fact_col",
-            values=(
-                FilterOptionValue(label="Min", value=0.0),
-                FilterOptionValue(label="Max", value=100.0),
-            ),
-        ),
+        CategoricalFilterOption(name="category_col", values=["value1", "value2"]),
+        MinMaxFilterOption(name="fact_col", values=(0.0, 100.0)),
     ]
 
 
@@ -413,17 +395,15 @@ async def test_get_filter_options(sample_filter_options):
     assert len(result) == 2
 
     # Check first filter option (category type)
-    assert result[0].kind == "FilterOptionCategory"
+    assert result[0].kind == "CategoricalFilterOption"
     assert len(result[0].values) == 2
-    assert result[0].values[0].label == "Value 1"
-    assert result[0].values[0].value == "value1"
+    assert result[0].values[0] == "value1"
+    assert result[0].values[1] == "value2"
 
     # Check second filter option (min/max type)
-    assert result[1].kind == "FilterOptionMinMax"
-    assert result[1].values[0].label == "Min"
-    assert result[1].values[0].value == 0.0
-    assert result[1].values[1].label == "Max"
-    assert result[1].values[1].value == 100.0
+    assert result[1].kind == "MinMaxFilterOption"
+    assert result[1].values[0] == 0.0
+    assert result[1].values[1] == 100.0
 
 
 @pytest.mark.parametrize(
@@ -480,7 +460,7 @@ async def test_abstract_execute_query_raises_not_implemented():
         async def get_filter_options(self):
             pass  # implement one method but not execute_query
 
-    repo = ConcreteRepository()
+    repo = ConcreteRepository(dataset=sample_dataset)
     with pytest.raises(NotImplementedError) as exc_info:
         await repo.execute_query(None)
     assert "MethodNotImplementedBySubClass execute_query" in str(exc_info.value)
@@ -494,7 +474,7 @@ async def test_abstract_get_filter_options_raises_not_implemented():
         async def execute_query(self, query):
             pass  # implement one method but not get_filter_options
 
-    repo = ConcreteRepository()
+    repo = ConcreteRepository(dataset=sample_dataset)
     with pytest.raises(NotImplementedError) as exc_info:
         await repo.get_filter_options()
     assert "MethodNotImplementedBySubClass get_filter_options" in str(exc_info.value)

@@ -1,9 +1,11 @@
 [project]
 name            = "api"
 version         = "0.1.0"
-description     = "FastAPI backend for microfrontend application"
+description     = ""
 authors         = []
-dependencies    = [
+requires-python = ">=3.12"
+
+dependencies = [ # Production dependencies
     "fastapi==0.115.11",
     "orjson>=3.10.15",
     "pandas>=2.2.3",
@@ -18,15 +20,26 @@ dependencies    = [
     "tomli>=2.2.1",
     "uvicorn==0.34.0",
 ]
-requires-python = ">=3.12"
+
+[dependency-groups]
+dev = [ # Development dependencies
+    "httpx>=0.28.1",
+    "mypy>=1.15.0",
+    "pandas-stubs>=2.2.3.250308",
+    "pytest-asyncio>=0.23.5",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    "pytest>=8.0.0",
+    "ruff>=0.3.0",
+    "types-psycopg2>=2.9.21.20250318",
+]
 
 [tool.ruff]
 line-length    = 100
 fix            = true
 target-version = "py312"
 
-# Enable pycodestyle (E), Pyflakes (F), isort (I), and other recommended rules
-select = [
+select = [ # Enable pycodestyle (E), Pyflakes (F), isort (I), and other recommended rules
     "E",   # pycodestyle errors
     "F",   # pyflakes
     "I",   # isort
@@ -84,16 +97,13 @@ indent-style              = "space"
 line-ending               = "auto"
 skip-magic-trailing-comma = false
 
-[dependency-groups]
-dev = ["httpx>=0.28.1", "mypy>=1.15.0", "pytest-asyncio>=0.23.5", "pytest-cov>=4.1.0", "pytest-mock>=3.12.0", "pytest>=8.0.0", "ruff>=0.3.0", "types-psycopg2>=2.9.21.20250318"]
-
 [tool.pytest.ini_options]
 addopts = """ \
 --cov=anyset \
 --cov-branch \
 --cov-report=term-missing \
 --cov-fail-under=80 \
-test/
+tests/
 """
 
 [tool.coverage.run]

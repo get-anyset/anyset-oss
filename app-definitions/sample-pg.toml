@@ -7,10 +7,10 @@ version     = 1
 adapter = "postgresql"
 
 [adapter_config]
-host     = "localhost"
-port     = 5432
-database = "mydatabase"
-user     = "myuser"
+host     = "$env!PG_SAMPLE_DATASET_HOST"
+port     = "$env!PG_SAMPLE_DATASET_PORT"
+database = "$env!PG_SAMPLE_DATASET_DATABASE"
+user     = "$env!PG_SAMPLE_DATASET_USER"
 password = "$env!PG_SAMPLE_DATASET_PASSWORD"
 
 [dataset_tables.cc_transactions]
