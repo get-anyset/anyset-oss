@@ -1,4 +1,4 @@
-name        = "Sample Snowflake Basic Dataset"
+name        = "Sample Snowflake Dataset With Basic Auth"
 description = "A sample app for the AnySet Framework backed by Snowflake with Basic Authentication"
 
 path_prefix = "sample-snowflake-basic"
@@ -8,7 +8,6 @@ adapter = "snowflake"
 
 [adapter_config]
 authenticator = "snowflake"
-account       = "$env!SNOWFLAKE_BASIC_SAMPLE_DATASET_ACCOUNT"
 user          = "$env!SNOWFLAKE_BASIC_SAMPLE_DATASET_USER"
 password      = "$env!SNOWFLAKE_BASIC_SAMPLE_DATASET_PASSWORD"
 database      = "SANDBOX"
