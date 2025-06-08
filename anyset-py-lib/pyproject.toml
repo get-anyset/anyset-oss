@@ -1,9 +1,12 @@
 [project]
-name            = "api"
+name            = "anyset"
 version         = "0.1.0"
-description     = ""
-authors         = []
+authors         = [{ name = "buffolander", email = "brdu1976@gmail.com" }]
 requires-python = ">=3.12"
+
+description = """
+AnySet is a Python library designed to accelerate backend development for data visualization applications, emphasizing extensibility and rapid iteration.
+"""
 
 dependencies = [ # Production dependencies
     "fastapi==0.115.11",

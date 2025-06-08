@@ -1,0 +1,12 @@
+{
+  "name": "anyset-py-lib",
+  "root": "anyset-py-lib",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cd anyset-py-lib && uv sync && uv run python main.py"
+      }
+    }
+  }
+} 
