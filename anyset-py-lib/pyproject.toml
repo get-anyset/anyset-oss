@@ -18,17 +18,11 @@ dependencies = [ # Production dependencies
     "python-slugify>=8.0.4",
     "sqlalchemy>=2.0.40",
     "tomli>=2.2.1",
-    "uvicorn==0.34.0",
 ]
 
 [project.optional-dependencies]
-postgres = [
-    "psycopg2-binary>=2.9.10",
-]
-snowflake = [
-    "snowflake-connector-python>=3.14.0",
-    "snowflake-sqlalchemy>=1.7.3",
-]
+postgres  = ["psycopg2-binary>=2.9.10"]
+snowflake = ["snowflake-connector-python>=3.14.0", "snowflake-sqlalchemy>=1.7.3"]
 
 [dependency-groups]
 dev = [ # Development dependencies
