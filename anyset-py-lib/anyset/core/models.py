@@ -323,22 +323,22 @@ class BaseQueryRequest(PydanticBaseModel):
         return list(group_by_columns)
 
 
-class BaseResultsetColumn(PydanticBaseModel):
+class BaseResultSetColumn(PydanticBaseModel):
     """A column in a query response."""
 
-    kind: Literal["BaseResultsetColumn"] = "BaseResultsetColumn"
+    kind: Literal["BaseResultSetColumn"] = "BaseResultSetColumn"
     alias: str
     breakdown: str | None = None
     data: list[str | None] | list[float | None] | list[bool | None] | list[datetime | None]
 
 
-class BaseResultset(PydanticBaseModel):
-    """Base for a resultset extended by QueryResponseDTO and (repository) Resultset."""
+class BaseResultSet(PydanticBaseModel):
+    """Base for a result set extended by QueryResponseDTO and (repository) Resultset."""
 
     dataset: str
     version: int
     rows: int
-    columns: list[BaseResultsetColumn]
+    columns: list[BaseResultSetColumn]
 
 
 class QueryRequest(BaseQueryRequest):
@@ -440,10 +440,10 @@ class QueryRequest(BaseQueryRequest):
         return self
 
 
-class Resultset(BaseResultset):
-    """A resultset from a query."""
+class ResultSet(BaseResultSet):
+    """A result set from a query."""
 
-    kind: Literal["Resultset"] = "Resultset"
+    kind: Literal["ResultSet"] = "ResultSet"
 
 
 class MinMaxFilterOption(BaseModel):

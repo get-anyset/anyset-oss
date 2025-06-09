@@ -11,7 +11,7 @@ from sqlalchemy.dialects import registry
 import sqlalchemy.pool as pool
 
 from anyset.core.models import (
-    BaseResultsetColumn,
+    BaseResultSetColumn,
     CategoricalFilterOption,
     ColumnType,
     Dataset,
@@ -20,7 +20,7 @@ from anyset.core.models import (
     QueryRequest,
     QueryRequestAggregation,
     QueryRequestCustomAggregation,
-    Resultset,
+    ResultSet,
 )
 from anyset.core.repository_interface import IRepository
 from anyset.core.singleton_meta import SingletonMeta
@@ -79,14 +79,14 @@ class SnowflakeAdapter(IRepository, metaclass=SingletonMeta):
         except snowflake.connector.errors.Error as ex:
             raise RuntimeError(f"SnowflakeConnectionError {ex}") from ex
 
-    async def execute_query(self, query: QueryRequest) -> Resultset:
+    async def execute_query(self, query: QueryRequest) -> ResultSet:
         """Execute a query on the database.
 
         Args:
             query: QueryRequest - The query to execute
 
         Returns:
-            Resultset - The resultset from the query
+            ResultSet - The result set from the query
         """
         if self._pool is None:
             raise RuntimeError("PostgreSQLConnectionPoolNotInitialized")
@@ -100,14 +100,14 @@ class SnowflakeAdapter(IRepository, metaclass=SingletonMeta):
             cursor.execute(sql, params)
             data = cursor.fetchall()
             columns = [
-                BaseResultsetColumn(
+                BaseResultSetColumn(
                     alias=col[0],
                     breakdown=None,
                     data=[row[i] for row in data],
                 )
                 for i, col in enumerate(cursor.description)
             ]
-            resultset = Resultset(
+            results = ResultSet(
                 dataset=self.dataset.name,
                 version=self.dataset.version,
                 rows=cursor.rowcount or 0,
@@ -119,7 +119,7 @@ class SnowflakeAdapter(IRepository, metaclass=SingletonMeta):
             cursor.close() if cursor else None
             conn.close() if conn else None
 
-        return resultset
+        return results
 
     def _build_sql_query(self, query: QueryRequest) -> tuple[str, dict[str, Any]]:
         """Build a SQL query from a QueryRequest.
