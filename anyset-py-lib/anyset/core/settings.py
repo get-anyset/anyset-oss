@@ -28,7 +28,6 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8080
     debug: bool = False
-    log_level: str = "INFO"
 
     cors_allow_credentials: bool = True
     cors_allow_headers: list[str] = ["*"]

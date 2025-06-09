@@ -9,7 +9,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import psycopg2.pool
 
-from ..models import (
+from ..core.models import (
     BaseResultsetColumn,
     CategoricalFilterOption,
     ColumnType,
@@ -21,8 +21,8 @@ from ..models import (
     QueryRequestCustomAggregation,
     Resultset,
 )
-from ..repository_interface import IRepository
-from ..singleton_meta import SingletonMeta
+from ..core.repository_interface import IRepository
+from ..core.singleton_meta import SingletonMeta
 from .settings import PostgresSettings, postgres_settings
 
 logger = logging.getLogger(__name__)

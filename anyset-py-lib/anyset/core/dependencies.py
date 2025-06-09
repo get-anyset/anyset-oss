@@ -8,11 +8,11 @@ from fastapi import HTTPException, Request, status
 import orjson
 from pydantic import ValidationError
 
+from ..adapters_repository_postgres import PostgresAdapter
+from ..adapters_repository_snowflake import SnowflakeAdapter
 from .models import QueryRequest, RepositoryOption
-from .postgres_adapter import PostgresAdapter
 from .repository_interface import IRepository
 from .settings import settings
-from .snowflake_adapter import SnowflakeAdapter
 
 logger = getLogger(__name__)
 
@@ -63,7 +63,7 @@ async def inject_dataset(request: Request) -> QueryRequest:
     body_bytes = await request.body()
 
     if body_bytes:
-        body_json = orjson.loads(body_bytes)
+        body_json = orjson.loads(body_bytes)  # pylint: disable=E1101
     else:
         body_json = {}
 

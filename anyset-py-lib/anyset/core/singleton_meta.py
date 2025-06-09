@@ -23,13 +23,24 @@ class SingletonMeta(type):
         repository_instance_key = (
             f"{dataset.path_prefix}/{dataset.version}" if isinstance(dataset, Dataset) else ""
         )
-        logger.debug(f"__call__repository_instance_key '{repository_instance_key}'")
+        logger.debug(
+            "__call__repository_instance_key '%s'",
+            repository_instance_key,
+        )
         instance_key = (cls, repository_instance_key)
 
         if instance_key not in cls._instances:
-            logger.debug(f"__call__instance_key '{cls.__name__} {instance_key}' not in _instances")
+            logger.debug(
+                "__call__instance_key '%s %s' not in _instances",
+                cls.__name__,
+                instance_key,
+            )
             cls._instances[instance_key] = super().__call__(*args, **kwargs)
         else:
-            logger.debug(f"__call__instance_key '{cls.__name__} {instance_key}' already exists")
+            logger.debug(
+                "__call__instance_key '%s %s' already exists",
+                cls.__name__,
+                instance_key,
+            )
 
         return cls._instances[instance_key]
