@@ -5,7 +5,13 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "cd anyset-py-lib && uv sync && uv run python main.py"
+        "command": "cd anyset-py-lib && uv build"
+      }
+    },
+    "publish": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cd anyset-py-lib && uv publish --username __token__ --password $PYPI_TOKEN"
       }
     }
   }

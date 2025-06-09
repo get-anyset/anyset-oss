@@ -22,6 +22,7 @@ node_modules
 @mf-types/
 __pycache__/
 dist/
+*.egg-info/
 
 # test coverage
 .coverage
