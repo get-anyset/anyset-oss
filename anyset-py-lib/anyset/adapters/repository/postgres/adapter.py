@@ -9,7 +9,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import psycopg2.pool
 
-from ..core.models import (
+from anyset.core.models import (
     BaseResultsetColumn,
     CategoricalFilterOption,
     ColumnType,
@@ -21,8 +21,9 @@ from ..core.models import (
     QueryRequestCustomAggregation,
     Resultset,
 )
-from ..core.repository_interface import IRepository
-from ..core.singleton_meta import SingletonMeta
+from anyset.core.repository_interface import IRepository
+from anyset.core.singleton_meta import SingletonMeta
+
 from .settings import PostgresSettings, postgres_settings
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,8 @@ class PostgresAdapter(IRepository, metaclass=SingletonMeta):
         Args:
             dataset: Dataset - The dataset definition object
         """
+        super().__init__(dataset)
+
         settings = {**postgres_settings.model_dump(), **dataset.adapter_config}
         self._setup_connection_pool(PostgresSettings(**settings))
         self.dataset = dataset

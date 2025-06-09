@@ -10,7 +10,7 @@ import snowflake.connector
 from sqlalchemy.dialects import registry
 import sqlalchemy.pool as pool
 
-from ..core.models import (
+from anyset.core.models import (
     BaseResultsetColumn,
     CategoricalFilterOption,
     ColumnType,
@@ -22,8 +22,9 @@ from ..core.models import (
     QueryRequestCustomAggregation,
     Resultset,
 )
-from ..core.repository_interface import IRepository
-from ..core.singleton_meta import SingletonMeta
+from anyset.core.repository_interface import IRepository
+from anyset.core.singleton_meta import SingletonMeta
+
 from .settings import SnowflakeSettings, snowflake_settings
 
 logger = logging.getLogger(__name__)

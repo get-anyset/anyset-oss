@@ -8,8 +8,7 @@ from fastapi import HTTPException, Request, status
 import orjson
 from pydantic import ValidationError
 
-from ..adapters_repository_postgres import PostgresAdapter
-from ..adapters_repository_snowflake import SnowflakeAdapter
+from ..adapters import PostgresAdapter, SnowflakeAdapter
 from .models import QueryRequest, RepositoryOption
 from .repository_interface import IRepository
 from .settings import settings
