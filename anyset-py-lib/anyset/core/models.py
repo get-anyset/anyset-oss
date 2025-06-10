@@ -333,7 +333,7 @@ class BaseResultSetColumn(PydanticBaseModel):
 
 
 class BaseResultSet(PydanticBaseModel):
-    """Base for a result set extended by QueryResponseDTO and (repository) Resultset."""
+    """Base for a result set extended by QueryResponseDTO and (repository) ResultSet."""
 
     dataset: str
     version: int

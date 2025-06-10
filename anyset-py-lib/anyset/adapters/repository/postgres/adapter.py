@@ -10,7 +10,7 @@ from psycopg2.extras import RealDictCursor
 import psycopg2.pool
 
 from anyset.core.models import (
-    BaseResultsetColumn,
+    BaseResultSetColumn,
     CategoricalFilterOption,
     ColumnType,
     Dataset,
@@ -19,7 +19,7 @@ from anyset.core.models import (
     QueryRequest,
     QueryRequestAggregation,
     QueryRequestCustomAggregation,
-    Resultset,
+    ResultSet,
 )
 from anyset.core.repository_interface import IRepository
 from anyset.core.singleton_meta import SingletonMeta
@@ -67,7 +67,7 @@ class PostgresAdapter(IRepository, metaclass=SingletonMeta):
         except psycopg2.Error as ex:
             raise RuntimeError(f"FailedConnectPostgreSQLConnectionPool {ex}") from ex
 
-    async def execute_query(self, query: QueryRequest) -> Resultset:
+    async def execute_query(self, query: QueryRequest) -> ResultSet:
         """Execute a query on a PostgreSQL database.
 
         Args:
@@ -92,7 +92,7 @@ class PostgresAdapter(IRepository, metaclass=SingletonMeta):
                 rows = cursor.fetchall()
 
                 columns = [
-                    BaseResultsetColumn(
+                    BaseResultSetColumn(
                         alias=desc[0],
                         breakdown=None,
                         data=[r[desc[0]] for r in rows],
@@ -100,7 +100,7 @@ class PostgresAdapter(IRepository, metaclass=SingletonMeta):
                     for desc in cursor.description
                 ]
 
-                return Resultset(
+                return ResultSet(
                     dataset=query.dataset._id,
                     version=query.dataset.version,
                     rows=len(rows),

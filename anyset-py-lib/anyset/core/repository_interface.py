@@ -2,7 +2,7 @@
 
 from abc import abstractmethod
 
-from .models import Dataset, FilterOptions, QueryRequest, Resultset
+from .models import Dataset, FilterOptions, QueryRequest, ResultSet
 
 
 class IRepository:
@@ -21,7 +21,7 @@ class IRepository:
         self.dataset = dataset
 
     @abstractmethod
-    async def execute_query(self, query: QueryRequest) -> Resultset:
+    async def execute_query(self, query: QueryRequest) -> ResultSet:
         """Execute a query on a dataset.
 
         Args:
