@@ -1,0 +1,39 @@
+{
+  "name": "anyset-react",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "rsbuild dev",
+    "build": "rsbuild build",
+    "preview": "rsbuild preview",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "prepare": "husky install"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "husky": "8",
+    "lint-staged": "13",
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx,js,jsx,json,css,scss,md}": [
+      "prettier --write"
+    ],
+    "src/**/*.{ts,tsx,js,jsx}": [
+      "eslint --fix"
+    ]
+  }
+}
