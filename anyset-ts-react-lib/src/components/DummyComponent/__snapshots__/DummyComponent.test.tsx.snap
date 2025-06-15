@@ -1,0 +1,14 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`DummyComponent matches snapshot 1`] = `
+<DocumentFragment>
+  <div>
+    <h1>
+      Dummy Component
+    </h1>
+    <p>
+      This is a dummy component for testing purposes.
+    </p>
+  </div>
+</DocumentFragment>
+`;
