@@ -1,12 +1,7 @@
 module.exports = {
-  root: true, // Prevent ESLint from looking further up the directory tree
+  root: true,
   parser: '@typescript-eslint/parser',
-  plugins: [
-    '@typescript-eslint',
-    'react',
-    'react-hooks',
-    'jsx-a11y',
-  ],
+  plugins: ['@typescript-eslint', 'react', 'react-hooks', 'jsx-a11y'],
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
@@ -25,12 +20,12 @@ module.exports = {
     browser: true,
     es2021: true,
     node: true,
-    jest: true, // For Jest global variables in test files
+    jest: true,
   },
   rules: {
     // Basic ESLint rules
     'no-console': 'warn',
-    'no-unused-vars': 'off', // Use @typescript-eslint/no-unused-vars instead
+    'no-unused-vars': 'warn',
 
     // TypeScript specific rules
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
@@ -54,21 +49,20 @@ module.exports = {
       },
       rules: {
         '@typescript-eslint/no-var-requires': 'off', // Allow require in JS files like .eslintrc.js itself
-      }
+      },
     },
     {
       files: ['**/__tests__/**/*.[jt]s?(x)', '**/?(*.)+(spec|test).[jt]s?(x)'],
       extends: ['plugin:testing-library/react'], // if @testing-library/react is used
-    }
+    },
   ],
   ignorePatterns: [
+    '.coverage/',
     'node_modules/',
     'dist/',
     'build/',
-    '.rsbuild/',
     '*.js', // Ignoring root level JS config files for now, will refine if needed
     '*.cjs',
     '*.mjs',
-    'coverage/'
   ],
 };

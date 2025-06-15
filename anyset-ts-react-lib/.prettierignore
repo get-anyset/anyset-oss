@@ -1,8 +1,8 @@
 # Ignore artifacts:
+.coverage
 build
 dist
 dist-*
-coverage
 node_modules
 
 # Ignore lockfiles
