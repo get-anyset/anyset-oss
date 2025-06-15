@@ -3,16 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "anyset-py-lib",
+    "anyset-ts-react-lib"
   ],
   "devDependencies": {
     "@module-federation/rsbuild-plugin": "^0.15.0",
     "@module-federation/typescript": "^3.1.3",
     "@rsbuild/core": "^1.3.22",
-    "@rsbuild/plugin-babel": "^1.0.5",
     "@rsbuild/plugin-react": "^1.3.2",
     "@rsbuild/plugin-sass": "^1.2.2",
-    "@rsbuild/plugin-styled-components": "^1.3.0",
     "@rsbuild/plugin-svgr": "^1.2.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
@@ -32,12 +32,14 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "jest": "^30.0.0",
     "jest-environment-jsdom": "^30.0.0",
+    "lint-staged": "13",
     "nx": "^20.6.2",
     "prettier": "^3.5.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "sass": "^1.86.0",
     "ts-jest": "^29.4.0",
+    "tsup": "^8.5.0",
     "typescript": "^5.0.0"
   },
   "packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447",
