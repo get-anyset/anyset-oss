@@ -4,27 +4,32 @@
   "private": true,
   "main": "dist/index.js",
   "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
-  "scripts": {
-    "dev": "rsbuild dev",
-    "build": "rsbuild build",
-    "preview": "rsbuild preview",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "prepare": "husky install"
-  },
-  "peerDependencies": {
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0"
-  },
-  "devDependencies": {
-    "husky": "8",
-    "lint-staged": "13",
-    "typescript": "^5.0.0"
-  },
+  "types": "dist/types/index.d.ts",
   "files": [
     "dist"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "init": "husky install",
+    "build": "tsup",
+    "test": "jest --silent --coverage --coverageReporters=text",
+    "test:watch": "yarn test --watch",
+    "test:ci": "jest --coverage"
+  },
+  "devDependencies": {
+    "husky": "8",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "react": "^17 || ^18",
+    "react-dom": "^17 || ^18"
+  },
   "publishConfig": {
     "access": "public"
   },
