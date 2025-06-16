@@ -17,9 +17,14 @@
   "scripts": {
     "init": "husky install",
     "build": "tsup",
-    "test": "jest --silent --coverage --coverageReporters=text",
+    "test": "jest --coverage --coverageReporters=text",
     "test:watch": "yarn test --watch",
     "test:ci": "jest --coverage"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.80.7",
+    "axios": "^1.10.0",
+    "object-hash": "^3.0.0"
   },
   "devDependencies": {
     "husky": "8",
