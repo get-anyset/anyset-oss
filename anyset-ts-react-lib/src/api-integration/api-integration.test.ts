@@ -82,7 +82,7 @@ describe('ApiIntegration', () => {
 
     const api = new ApiIntegration<string, string, string, string>({ baseURL, slug, version });
 
-    const result = await api.fetchFilterOptions();
+    const result = await api.getFilterOptions();
 
     expect(mockGet).toHaveBeenCalledWith('/filter-options');
 
@@ -99,6 +99,6 @@ describe('ApiIntegration', () => {
 
     const api = new ApiIntegration<string, string, string, string>({ baseURL, slug, version });
 
-    await expect(api.fetchFilterOptions()).rejects.toThrow('FilterOptionsError 404 NOT FOUND');
+    await expect(api.getFilterOptions()).rejects.toThrow('FilterOptionsError 404 NOT FOUND');
   });
 });

@@ -66,12 +66,12 @@ export class ApiIntegration<
    *
    * @returns A promise that resolves to a {@link FilterOptionResponseDTO}.
    */
-  public async fetchFilterOptions(): Promise<FilterOptionResponseDTO> {
+  public async getFilterOptions(): Promise<FilterOptionResponseDTO> {
     const { status, statusText, data } =
       await this.client.get<FilterOptionResponseDTO>('/filter-options');
 
     if (!/^2\d{2}$/.test(status.toString()))
-      throw new Error(`FetchFilterOptionsError ${status} ${statusText}`);
+      throw new Error(`GetFilterOptionsError ${status} ${statusText}`);
 
     return data;
   }
