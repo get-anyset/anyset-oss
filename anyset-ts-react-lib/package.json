@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.80.7",
+    "@tanstack/react-table": "^8.21.3",
     "axios": "^1.10.0",
     "object-hash": "^3.0.0"
   },
